@@ -1,2 +1,2 @@
 # sMusic-core
-#### Core components of sMUSIC
+### Elementy systemu kontrolujące CMUSa
