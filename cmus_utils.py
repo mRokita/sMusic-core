@@ -7,7 +7,7 @@ from subprocess import check_output
 from os import remove
 import re
 
-PATTERN_STATUS = re.compile("(?:tag|set)? ?([abcdefghijklmnopqrstuvxyz_]+|duration|file) (.+)", re.DOTALL)
+PATTERN_STATUS = re.compile("(?:tag|set)? ?([abcdefghijklmnopqrstuvxyz_]+) (.+)", re.DOTALL)
 
 
 def exec_cmus_command(command):
@@ -98,6 +98,3 @@ def set_queue(queue):
         fo.write(queue)
     exec_cmus_command("add -q {0}".format("/tmp/sMusic_temp_playlist.m3u"))
     remove("/tmp/sMusic_temp_playlist.m3u")
-
-
-
