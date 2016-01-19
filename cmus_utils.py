@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+"""
+Moduł zawierający funkcje kontrolujące CMUSa
+"""
+
+# TODO: Dodać funkcje kontrolujące kolejki
 from subprocess import check_output
 import re
-
-
-# TODO: Dodać obsługę kolejki
-__doc__ = "Moduł zawierający funkcje kontrolujące CMUSa"
 
 PATTERN_STATUS = re.compile("(?:tag|set)? ?([abcdefghijklmnopqrstuvxyz_]+|duration|file) (.+)", re.DOTALL)
 
@@ -14,6 +15,41 @@ def exec_cmus_command(command):
 
 
 def get_player_status():
+    """
+    Zwraca słownik z informacjami o statusie odtwarzacza:
+        dict: {
+            "comment": "TPB FTW!",
+            "shuffle": "false",
+            "vol_left": "100",
+            "replaygain_preamp": "0.000000",
+            "genre": "General Alternative Rock",
+            "replaygain": "disabled",
+            "albumartist": "Artur Rojek",
+            "file": "/muzyka/Artur Rojek - Składam się z ciągłych powtórzeń [2014] [FLAC]/02 - Artur Rojek - Beksa.flac",
+            "duration": "241",
+            "tracknumber": "2",
+            "aaa_mode": "album",
+            "album": "Składam się z ciągłych powtórzeń",
+            "vol_right": "100",
+            "replaygain_album_gain": "-8.44 dB",
+            "title": "Beksa",
+            "repeat_current": "false",
+            "play_library": "true",
+            "replaygain_track_gain": "-9.72 dB",
+            "softvol": "false",
+            "replaygain_album_peak": "1.000000",
+            "status": "playing",
+            "repeat": "true",
+            "replaygain_limit": "true",
+            "date": "2014",
+            "discnumber": "1",
+            "play_sorted": "false",
+            "artist": "Artur Rojek",
+            "replaygain_track_peak": "0.988403",
+            "continue": "true",
+            "position": "108"
+        }
+    """
     output = check_output(["cmus-remote", "-Q"]).split("\n")
     status = dict()
     for line in output:
