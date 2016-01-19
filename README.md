@@ -1,2 +1,2 @@
 # sMusic-core
-#### Core compontests of sMUSIC
+#### Core components of sMUSIC
