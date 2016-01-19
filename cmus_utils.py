@@ -3,8 +3,8 @@
 Moduł zawierający funkcje kontrolujące CMUSa
 """
 
-# TODO: Dodać funkcje kontrolujące kolejki
 from subprocess import check_output
+from os import remove
 import re
 
 PATTERN_STATUS = re.compile("(?:tag|set)? ?([abcdefghijklmnopqrstuvxyz_]+|duration|file) (.+)", re.DOTALL)
@@ -80,4 +80,24 @@ def player_stop():
 
 
 def set_vol(vol):
-    return exec_cmus_command("vol {0}%".format(vol))
+    exec_cmus_command("vol {0}%".format(vol))
+
+
+def set_queue(queue):
+    """
+    Parametry:
+        - list<string> queue: kolejka w formie ["scieżka1", "sciezka2", "sciezka3"]
+    Zmienia kolejkę na podaną, jeśli jeden z utworów w kolejce jest właśnie odtwarzany,
+    wybierane są tylko utwory, które znajdują się w dalszej części kolejki
+    """
+    exec_cmus_command("clear -q")
+    current_file = get_player_status()["file"]
+    queue = "\n".join(queue)
+    queue = queue.split(current_file)[-1]
+    with open("/tmp/sMusic_temp_playlist.m3u", "w+") as fo:
+        fo.write(queue)
+    exec_cmus_command("add -q {0}".format("/tmp/sMusic_temp_playlist.m3u"))
+    remove("/tmp/sMusic_temp_playlist.m3u")
+
+
+
