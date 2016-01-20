@@ -1,2 +1,5 @@
 # sMusic-core
-#### Core components of sMUSIC
+### Elementy systemu kontrolujące CMUSa
+
+
+[![Code Climate](https://codeclimate.com/github/StaszicCode/sMusic-core/badges/gpa.svg)](https://codeclimate.com/github/StaszicCode/sMusic-core)
