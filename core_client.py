@@ -52,7 +52,7 @@ if __name__ == "__main__":
         parsed_msg = PATTERN_MSG.findall(msg)
         print parsed_msg
         if len(parsed_msg)==1 and len(parsed_msg[0]) == 2:
-            buff = parsed_msg[0][1]
+            buff += parsed_msg[0][1]
             esc_string = parsed_msg[0][0]
             try:
                 data = json.loads(un_escape(esc_string))
