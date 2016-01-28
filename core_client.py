@@ -24,7 +24,6 @@ def un_escape(msg):
 
 def bind(function):
     argspec = getargspec(function)
-    print argspec
     args = argspec[0]
     if argspec[-1]:
         req_args = args[:len(argspec[-1])-1]
@@ -39,8 +38,8 @@ def bind(function):
 
 
 @bind
-def print_to_console(text):
-    print text
+def type():
+    return {"request":"ok", "type": "radio"}
 
 
 if __name__ == "__main__":
@@ -50,19 +49,26 @@ if __name__ == "__main__":
     buff = ""
     while msg:
         parsed_msg = PATTERN_MSG.findall(msg)
-        print parsed_msg
         if len(parsed_msg)==1 and len(parsed_msg[0]) == 2:
             buff += parsed_msg[0][1]
             esc_string = parsed_msg[0][0]
             try:
                 data = json.loads(un_escape(esc_string))
-                print data
-                target = binds[data["target"]]["target"]
-                del data["target"]
-                target(**data)
-            except ValueError:
-                pass
+                print "RECEIVED: %s" % data
+                target = binds[data["request"]]["target"]
+                if "msgid" in data:
+                    msgid = binds[data["msgid"]]
+                del data["request"]
+                ret = target(**data)
+                print "RETURNING: %s" % ret
+                if "msgid" in data:
+                    ret["msgid"] = msgid
+                conn.send(escape(json.dumps(ret)))
+            except ValueError as e:
+                print e
+
 
         else:
             buff = ""
         msg = conn.read()
+    print "lel"
