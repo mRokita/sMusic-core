@@ -58,7 +58,7 @@ def play():
 def play_next():
     cmus_utils.player_next()
     return {"request": "ok", "status": cmus_utils.get_player_status()}
-print binds
+
 
 if __name__ == "__main__":
     conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
