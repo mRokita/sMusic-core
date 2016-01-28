@@ -39,8 +39,26 @@ def bind(function):
 
 @bind
 def type():
-    return {"request":"ok", "type": "radio"}
+    return {"request": "ok", "type": "radio", "key": config.server_key}
 
+
+@bind
+def pause():
+    cmus_utils.player_pause()
+    return {"request": "ok", "status": cmus_utils.get_player_status()}
+
+
+@bind
+def play():
+    cmus_utils.player_play()
+    return {"request": "ok", "status": cmus_utils.get_player_status()}
+
+
+@bind
+def play_next():
+    cmus_utils.player_next()
+    return {"request": "ok", "status": cmus_utils.get_player_status()}
+print binds
 
 if __name__ == "__main__":
     conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
@@ -49,26 +67,23 @@ if __name__ == "__main__":
     buff = ""
     while msg:
         parsed_msg = PATTERN_MSG.findall(msg)
-        if len(parsed_msg)==1 and len(parsed_msg[0]) == 2:
+        if len(parsed_msg) == 1 and len(parsed_msg[0]) == 2:
             buff += parsed_msg[0][1]
             esc_string = parsed_msg[0][0]
-            try:
-                data = json.loads(un_escape(esc_string))
+            data = json.loads(un_escape(esc_string))
+            if "request" in data:
                 print "RECEIVED: %s" % data
                 target = binds[data["request"]]["target"]
+                datacpy = dict(data)
+                del datacpy["request"]
+                if "msgid" in datacpy:
+                    del datacpy["msgid"]
+                ret = target(**datacpy)
                 if "msgid" in data:
-                    msgid = binds[data["msgid"]]
-                del data["request"]
-                ret = target(**data)
+                    ret["msgid"] = data["msgid"]
+
                 print "RETURNING: %s" % ret
-                if "msgid" in data:
-                    ret["msgid"] = msgid
                 conn.send(escape(json.dumps(ret)))
-            except ValueError as e:
-                print e
-
-
         else:
             buff = ""
         msg = conn.read()
-    print "lel"

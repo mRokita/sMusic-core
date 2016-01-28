@@ -65,11 +65,13 @@ def get_player_status():
 
 
 def player_pause():
-    exec_cmus_command("player-pause")
+    if get_player_status()["status"] != "paused":
+        exec_cmus_command("player-pause")
 
 
 def player_play():
-    exec_cmus_command("player-play")
+    if get_player_status()["status"] != "playing":
+        exec_cmus_command("player-play")
 
 
 def player_next():
@@ -135,7 +137,7 @@ def update_queue(q):
     """
     cached_queue = get_queue_from_disk("/tmp/sMusic_cached_queue.m3u")
     current_queue = get_queue()
-    played_tracks_cnt = len(cached_queue)-len(current_queue)
+    played_tracks_cnt = len(cached_queue) - len(current_queue)
     for i in range(played_tracks_cnt):
             if q[i] != cached_queue[i]:
                 raise ModifiedPlayedTrack("{0}th track in queue has been modified".format(i))
