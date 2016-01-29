@@ -72,8 +72,29 @@ def play_next():
 
 
 @bind
-def get_artist_names():
-    return {"request": "ok", "artists": dict([(album.name, album.id) for album in library.get_artists().values()])}
+def get_artists(minimal=True):
+    return {"request": "ok", "artists": dict([(artist.name, artist.id) for artist in library.get_artists().values()])}
+
+
+@bind
+def get_albums(artist=None):
+    if artist:
+
+        albums = dict([(album.name, album.id) for album in library.get_artist(artist).get_albums()])
+    else:
+        albums = dict([(album.name, album.id) for album in library.get_albums().values()])
+    return {"request": "ok", "albums": albums}
+
+
+@bind
+def get_tracks(artist=None, album=None):
+    tracks = []
+    if artist and not album:
+        tracks = dict([(track.name, track.id) for track in library.get_artist(artist).get_tracks()])
+    if artist and album:
+        tracks = dict([(track.name, track.id) for track in library.get_artist(artist).get_album(album).get_tracks()])
+    if not artist and not album:
+        tracks = dict([(track.name, track.id) for track in library.get_tracks()])
 
 
 if __name__ == "__main__":

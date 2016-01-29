@@ -7,6 +7,7 @@ from subprocess import check_output
 import os
 import re
 from mutagen import File
+import sys
 
 TYPE_ARTIST = 1
 TYPE_ALBUM = 2
@@ -31,9 +32,10 @@ class Tag:
             self.album = "<Unknown>"
             self.title = "<Unknown>"
 
+
 class TrackInfo:
     def __init__(self, path):
-        print path
+        sys.stdout.write(path+"\r")
         f = File(path, easy=True)
         self.path = path
         self.tag = Tag(f)
