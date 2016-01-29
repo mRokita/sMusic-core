@@ -4,9 +4,15 @@ Moduł zawierający funkcje kontrolujące CMUSa
 """
 
 from subprocess import check_output
-from os import remove
+import os
 import re
+import eyed3
 
+TYPE_ARTIST = 1
+TYPE_ALBUM = 2
+TYPE_TRACK = 3
+
+eyed3.log.setLevel("ERROR")
 PATTERN_STATUS = re.compile("(?:tag|set)? ?([abcdefghijklmnopqrstuvxyz_]+) (.+)", re.DOTALL)
 
 
@@ -14,6 +20,128 @@ class ModifiedPlayedTrack(Exception):
     def __init__(self, msg):
         super(ModifiedPlayedTrack, self).__init__(msg)
 
+
+class Artist:
+        """
+        Klasa reprezentująca artystę
+        """
+        def __init__(self, library, name):
+            self._albums = list()
+            self._library = library
+            self.id = id_from_tag(name)
+            self.name = name
+
+        def __str__(self):
+            return "Artist(\"{}\", {})".format(self.name.encode("utf-8"), [str(album) for album in self._albums])
+
+        def add_album(self, album):
+            self._albums.append(album)
+
+        def get_album(self, album):
+            album_id = id_from_tag(album)
+            for album in self._albums:
+                if album.id == album_id:
+                    return album
+
+        def get_albums(self):
+            return self._albums
+
+
+class Album:
+    """
+    Klasa reprezentująca album
+    """
+    def __init__(self, library, artist_id, name):
+        self._tracks = list()
+        self._library = library
+        self.id = id_from_tag(name)
+        self.name = name
+        self.artist = library.get_artist(artist_id)
+        self.artist.add_album(self)
+
+    def __str__(self):
+        return "Album({}, {})".format(self.name.encode("utf-8"), [str(track) for track in self._tracks])
+
+    def add_track(self, track):
+        self._tracks.append(track)
+
+    def get_tracks(self):
+        return list(self._tracks)
+
+    def get_track(self, track):
+        track_id = id_from_tag(track)
+        for track in self._tracks:
+            if track.id == track_id:
+                return track
+
+
+class Track:
+    """
+    Klasa reprezentująca utwór
+    """
+    def __init__(self, library, track):
+        self.file = track.path
+        self._library = library
+        self.id = id_from_tag(track.tag.title)
+        self.album = library.get_artist(id_from_tag(track.tag.artist)).get_album(id_from_tag(track.tag.album))
+        self.artist = self.album.artist
+        self.title = track.tag.title
+        self.search_name = self.artist.id + self.album.id + self.id
+        self.album.add_track(self)
+
+    def __str__(self):
+        return self.title.encode("utf-8")
+
+
+class MusicLibrary:
+    def __init__(self):
+        self.__artists = dict()
+        self.__albums = dict()
+        self.__tracks = dict()
+
+    def add_track(self, track_info):
+        artist_id = id_from_tag(track_info.tag.artist)
+
+        if artist_id not in self.__artists:
+            artist = (Artist(self, track_info.tag.artist))
+            self.add_artist(artist)
+        else:
+            artist = self.__artists[artist_id]
+
+        album_id = id_from_tag(track_info.tag.album)
+
+        if album_id not in [a.id for a in artist.get_albums()]:
+            album = Album(self, artist_id, track_info.tag.album)
+            if album.id not in self.__albums:
+                self.__albums[album.id] = [album]
+            else:
+                self.__albums[album.id].append(album)
+        track_id = id_from_tag(track_info.tag.title)
+
+        if track_id not in [track.id for track in self.get_artist(artist_id).get_album(album_id).get_tracks()]:
+            track = Track(self, track_info)
+
+    def add_artist(self, artist):
+        self.__artists[artist.id] = artist
+
+    def get_artist(self, artist):
+        """
+        Parametry: string artist - nazwa artysty
+        Zwraca artystę o danej nazwie (wcześniej jest castowana przez id_from_tag)
+        """
+        try:
+            return self.__artists[id_from_tag(artist)]
+        except KeyError:
+            return None
+
+    def get_artists(self):
+        return dict(self.__artists)
+
+    def get_album(self, album_id):
+        try:
+            return self.__albums[album_id]
+        except KeyError:
+            return None
 
 def exec_cmus_command(command):
     return check_output(["cmus-remote", "-C", command])
@@ -100,7 +228,7 @@ def set_queue(queue, skip=0):
     with open("/tmp/sMusic_queue.m3u", "w+") as fo:
         fo.write("\n".join(queue[skip:]))
     exec_cmus_command("add -q {0}".format("/tmp/sMusic_queue.m3u"))
-    remove("/tmp/sMusic_queue.m3u")
+    os.remove("/tmp/sMusic_queue.m3u")
     with open("/tmp/sMusic_cached_queue.m3u", "w+") as fo:
         fo.write("\n".join(queue))
 
@@ -112,7 +240,7 @@ def get_queue():
     """
     exec_cmus_command("save -q /tmp/getqueue.m3u")
     q = get_queue_from_disk("/tmp/getqueue.m3u")
-    remove("/tmp/getqueue.m3u")
+    os.remove("/tmp/getqueue.m3u")
     return q
 
 
@@ -120,7 +248,7 @@ def get_cached_queue():
     """
     Zwraca zcache'owaną kolejkę
     """
-    return get_queue_from_disk("/tmp/sMusic_cached_queue.m3u")
+    return get_queue_from_disk("/tmp/sMusic_cached_queue.pl")
 
 
 def get_queue_from_disk(uri):
@@ -129,17 +257,60 @@ def get_queue_from_disk(uri):
     return q.split("\n")
 
 
+def get_current_library():
+    """
+    Zdobywa listę ścieżek do utworów w bibliotece CMUSa
+    Zwraca list<string> złożoną ścieżek
+    """
+    if os.path.exists(os.path.expanduser("~/.config/cmus/")):
+        path = os.path.expanduser("~/.config/cmus/lib.pl")
+    elif os.path.exists(os.path.expanduser("~/.cmus/")):
+        path = os.path.expanduser("~/.cmus/lib.pl")
+    else:
+        return list()
+    lib = list()
+    exec_cmus_command("save {}".format(path))
+    with open(path) as fo:
+        line = fo.readline()
+        while line:
+            lib.append(line[:-1])
+            line = fo.readline()
+    return lib
+
+
+def id_from_tag(tag):
+    tag = tag.lower()
+    id = str()
+    for char in tag:
+        if char in "abcdefghijklmnopqrstuvwxyz1234567890":
+            id += char
+    return id
+
+
+def parse_current_library():
+    """
+    Analizuje aktualną bibliotekę muzyczną CMUSa
+    Zwraca instancję MusicLibrary
+    """
+    lib_files = get_current_library()
+    lib = MusicLibrary()
+    for file in lib_files[:-1]:
+        track = eyed3.load(file)
+        if track and track.tag and track.tag.artist and track.tag.album and track.tag.title:
+            lib.add_track(track)
+    return lib
+
+
 def update_queue(q):
     """
     Parametry:
         - list<string> queue: kolejka w formie ["scieżka1", "sciezka2", "sciezka3"]
     Aktualizuje kolejkę i pomija odtworzone utwory
     """
-    cached_queue = get_queue_from_disk("/tmp/sMusic_cached_queue.m3u")
+    cached_queue = get_queue_from_disk("/tmp/sMusic_cached_queue.pl")
     current_queue = get_queue()
     played_tracks_cnt = len(cached_queue) - len(current_queue)
     for i in range(played_tracks_cnt):
             if q[i] != cached_queue[i]:
                 raise ModifiedPlayedTrack("{0}th track in queue has been modified".format(i))
     set_queue(q, played_tracks_cnt)
-
