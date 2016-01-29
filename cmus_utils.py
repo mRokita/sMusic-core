@@ -6,13 +6,12 @@ Moduł zawierający funkcje kontrolujące CMUSa
 from subprocess import check_output
 import os
 import re
-import eyed3
+from mutagen import File
 
 TYPE_ARTIST = 1
 TYPE_ALBUM = 2
 TYPE_TRACK = 3
 
-eyed3.log.setLevel("ERROR")
 PATTERN_STATUS = re.compile("(?:tag|set)? ?([abcdefghijklmnopqrstuvxyz_]+) (.+)", re.DOTALL)
 
 
@@ -20,6 +19,24 @@ class ModifiedPlayedTrack(Exception):
     def __init__(self, msg):
         super(ModifiedPlayedTrack, self).__init__(msg)
 
+
+class Tag:
+    def __init__(self, tags):
+        try:
+            self.artist = tags["artist"][0]
+            self.album = tags["album"][0]
+            self.title = tags["title"][0]
+        except Exception:
+            self.artist = "<Unknown>"
+            self.album = "<Unknown>"
+            self.title = "<Unknown>"
+
+class TrackInfo:
+    def __init__(self, path):
+        print path
+        f = File(path, easy=True)
+        self.path = path
+        self.tag = Tag(f)
 
 class Artist:
         """
@@ -164,7 +181,6 @@ class MusicLibrary:
         return dict(self.__tracks)
 
 
-
 def exec_cmus_command(command):
     return check_output(["cmus-remote", "-C", command])
 
@@ -295,7 +311,7 @@ def get_current_library():
     with open(path) as fo:
         line = fo.readline()
         while line:
-            lib.append(line[:-1])
+            lib.append(os.path.expanduser(line[:-1]))
             line = fo.readline()
     return lib
 
@@ -317,9 +333,8 @@ def parse_current_library():
     lib_files = get_current_library()
     lib = MusicLibrary()
     for file in lib_files[:-1]:
-        track = eyed3.load(file)
-        if track and track.tag and track.tag.artist and track.tag.album and track.tag.title:
-            lib.add_track(track)
+        track_info = TrackInfo(file)
+        lib.add_track(track_info)
     return lib
 
 

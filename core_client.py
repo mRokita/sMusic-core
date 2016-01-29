@@ -59,7 +59,6 @@ def play():
     cmus_utils.player_play()
     return {"request": "ok", "status": cmus_utils.get_player_status()}
 
-
 @bind
 def set_vol(value):
     cmus_utils.set_vol(value)
@@ -72,9 +71,14 @@ def play_next():
     return {"request": "ok", "status": cmus_utils.get_player_status()}
 
 
+@bind
+def get_artist_names():
+    return {"request": "ok", "artists": dict([(album.name, album.id) for album in library.get_artists().values()])}
+
+
 if __name__ == "__main__":
     print "Analizowanie biblioteki..."
-    library = cmus_utils.get_current_library()
+    library = cmus_utils.parse_current_library()
     print "\rZakończono analizowanie biblioteki."
     conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
     conn.connect((config.server_host, config.server_port))
