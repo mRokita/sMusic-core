@@ -7,6 +7,7 @@ import socket
 import ssl
 import cmus_utils
 import re
+import sys
 import json
 from base64 import b64encode, b64decode
 from inspect import getargspec
@@ -40,6 +41,7 @@ def bind(function):
 
 @bind
 def type():
+    print "\rWykonano handshake! Łączenie z serwerem zakończone."
     return {"request": "ok", "type": "radio", "key": config.server_key}
 
 
@@ -72,7 +74,7 @@ def play_next():
 
 
 @bind
-def get_artists(minimal=True):
+def get_artists():
     return {"request": "ok", "artists": dict([(artist.name, artist.id) for artist in library.get_artists().values()])}
 
 
@@ -90,19 +92,23 @@ def get_albums(artist=None):
 def get_tracks(artist=None, album=None):
     tracks = []
     if artist and not album:
-        tracks = dict([(track.name, track.id) for track in library.get_artist(artist).get_tracks()])
+        tracks = dict([(track.title, track.id) for track in library.get_artist(artist).get_tracks()])
     if artist and album:
-        tracks = dict([(track.name, track.id) for track in library.get_artist(artist).get_album(album).get_tracks()])
+        tracks = dict([(track.title, track.id) for track in library.get_artist(artist).get_album(album).get_tracks()])
     if not artist and not album:
-        tracks = dict([(track.name, track.id) for track in library.get_tracks()])
+        tracks = dict([(track.title, track.id) for track in library.get_tracks()])
+    return {"request": "ok", "tracks": tracks}
 
 
 if __name__ == "__main__":
     print "Analizowanie biblioteki..."
     library = cmus_utils.parse_current_library()
     print "\rZakończono analizowanie biblioteki."
+    sys.stdout.write("Łączenie z serwerem...")
     conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
     conn.connect((config.server_host, config.server_port))
+    print "\rPołączono z serwerem!"
+    print "Oczekiwanie na handshake..."
     msg = conn.read()
     buff = ""
     while msg:
