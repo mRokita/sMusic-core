@@ -61,6 +61,9 @@ def play_next():
 
 
 if __name__ == "__main__":
+    print "Analizowanie biblioteki..."
+    library = cmus_utils.get_current_library()
+    print "\rZakończono analizowanie biblioteki."
     conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
     conn.connect((config.server_host, config.server_port))
     msg = conn.read()

@@ -134,14 +134,36 @@ class MusicLibrary:
         except KeyError:
             return None
 
+    def get_track(self, track):
+        """
+        Parametry: string artist - nazwa utworu
+        Zwraca listę utworów o danej nazwie (wcześniej jest castowana przez id_from_tag)
+        """
+        try:
+            return self.__tracks[id_from_tag(track)]
+        except KeyError:
+            return None
+
+    def get_album(self, album):
+        """
+        Parametry: string artist - nazwa utworu
+        Zwraca listę albumów o danej nazwie (wcześniej jest castowana przez id_from_tag)
+        """
+        try:
+            return self.__albums[id_from_tag(album)]
+        except KeyError:
+            return None
+
     def get_artists(self):
         return dict(self.__artists)
 
-    def get_album(self, album_id):
-        try:
-            return self.__albums[album_id]
-        except KeyError:
-            return None
+    def get_albums(self):
+        return dict(self.__albums)
+
+    def get_tracks(self):
+        return dict(self.__tracks)
+
+
 
 def exec_cmus_command(command):
     return check_output(["cmus-remote", "-C", command])
