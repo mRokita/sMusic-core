@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Bardzo minimalny testowy klient TCP
 """
@@ -49,9 +50,20 @@ def pause():
 
 
 @bind
+def status():
+    return {"request": "ok", "status": cmus_utils.get_player_status()}
+
+
+@bind
 def play():
     cmus_utils.player_play()
     return {"request": "ok", "status": cmus_utils.get_player_status()}
+
+
+@bind
+def set_vol(value):
+    cmus_utils.set_vol(value)
+    return {"request": "ok"}
 
 
 @bind
