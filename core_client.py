@@ -11,6 +11,8 @@ import sys
 import json
 from base64 import b64encode, b64decode
 from inspect import getargspec
+from threading import Thread
+from functools import partial
 
 binds = {}
 PATTERN_MSG = re.compile("([ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=+/]*?)\n(.+)?", re.DOTALL)
@@ -61,6 +63,7 @@ def play():
     cmus_utils.player_play()
     return {"request": "ok", "status": cmus_utils.get_player_status()}
 
+
 @bind
 def set_vol(value):
     cmus_utils.set_vol(value)
@@ -89,6 +92,23 @@ def get_albums(artist=None):
 
 
 @bind
+def get_current_queue():
+    q = cmus_utils.get_queue()
+    tracks = {}
+    for path in q:
+        track = library.get_track_by_filename(path)
+        tracks[track.title] = {
+            "artist_id": track.artist.id,
+            "artist": track.artist.name,
+            "album_id": track.album.id,
+            "album": track.album.name,
+            "file": track.file,
+            "id": track.id
+        }
+    return {"request": "ok", "queue": tracks}
+
+
+@bind
 def get_tracks(artist=None, album=None):
     tracks = []
     if artist and not album:
@@ -99,6 +119,20 @@ def get_tracks(artist=None, album=None):
         tracks = dict([(track.title, track.id) for track in library.get_tracks()])
     return {"request": "ok", "tracks": tracks}
 
+
+def handle_message(data, conn):
+    print "RECEIVED: %s" % data
+    target = binds[data["request"]]["target"]
+    datacpy = dict(data)
+    del datacpy["request"]
+    if "msgid" in datacpy:
+        del datacpy["msgid"]
+    ret = target(**datacpy)
+    if "msgid" in data:
+        ret["msgid"] = data["msgid"]
+
+    print "RETURNING: %s" % ret
+    conn.send(escape(json.dumps(ret)))
 
 if __name__ == "__main__":
     print "Analizowanie biblioteki..."
@@ -118,18 +152,7 @@ if __name__ == "__main__":
             esc_string = parsed_msg[0][0]
             data = json.loads(un_escape(esc_string))
             if "request" in data:
-                print "RECEIVED: %s" % data
-                target = binds[data["request"]]["target"]
-                datacpy = dict(data)
-                del datacpy["request"]
-                if "msgid" in datacpy:
-                    del datacpy["msgid"]
-                ret = target(**datacpy)
-                if "msgid" in data:
-                    ret["msgid"] = data["msgid"]
-
-                print "RETURNING: %s" % ret
-                conn.send(escape(json.dumps(ret)))
+                Thread(target=partial(handle_message, data, conn)).start()
         else:
             buff = ""
         msg = conn.read()
