@@ -77,34 +77,67 @@ def play_next():
 
 
 @bind
+def play_prev():
+    cmus_utils.player_prev()
+    return {"request": "ok", "status": cmus_utils.get_player_status()}
+
+
+@bind
 def get_artists():
-    return {"request": "ok", "artists": dict([(artist.name, artist.id) for artist in library.get_artists().values()])}
+    return {"request": "ok", "artists": [{"name": artist.name, "id": artist.id} for artist in sorted(library.get_artists().values(), key=lambda x: x.name)]}
 
 
 @bind
 def get_albums(artist=None):
     if artist:
-
-        albums = dict([(album.name, album.id) for album in library.get_artist(artist).get_albums()])
+        lib_artist = library.get_artist(artist)
+        albums = [{"name": album.name, "id": album.id} for album in sorted(lib_artist.get_albums(), key=lambda x: x.name)]
+        return {"request": "ok", "albums": albums, "artist_name": lib_artist.name}
     else:
-        albums = dict([(album.name, album.id) for album in library.get_albums().values()])
+        albums = [{"name": album.name, "id": album.id} for album in sorted(library.get_albums().values(), key=lambda x: x.name)]
     return {"request": "ok", "albums": albums}
 
 
 @bind
+def add_to_queue(artist_id,album_id, track_id):
+    cmus_utils.add_to_queue_from_lib(library, artist_id, album_id, track_id)
+    return {"request": "ok", "queue": cmus_utils.get_queue()}
+
+
+@bind
+def clear_queue():
+    cmus_utils.clear_queue()
+    return {"request": "ok"}
+
+
+@bind
+def set_queue_to_single_track(artist_id, album_id, track_id, start_playing=False):
+    cmus_utils.clear_queue()
+    cmus_utils.add_to_queue_from_lib(library, artist_id, album_id, track_id)
+    cmus_utils.exec_cmus_command("set play_library=false")
+    if start_playing:
+        cmus_utils.player_next()
+        cmus_utils.player_play()
+    return {"request": "ok"}
+
+@bind
 def get_current_queue():
     q = cmus_utils.get_queue()
-    tracks = {}
+    tracks = []
     for path in q:
+        print [path]
         track = library.get_track_by_filename(path)
-        tracks[track.title] = {
+        tracks.append({
             "artist_id": track.artist.id,
             "artist": track.artist.name,
+            "title": track.title,
             "album_id": track.album.id,
             "album": track.album.name,
             "file": track.file,
-            "id": track.id
-        }
+            "id": track.id,
+            "length": track.length,
+            "length_readable": "0".join(("%2.2s:%2.2s" % (int(track.length // 60), int(track.length % 60))).split(" "))
+        })
     return {"request": "ok", "queue": tracks}
 
 
@@ -112,11 +145,16 @@ def get_current_queue():
 def get_tracks(artist=None, album=None):
     tracks = []
     if artist and not album:
-        tracks = dict([(track.title, track.id) for track in library.get_artist(artist).get_tracks()])
+        lib_artist = library.get_artist(artist)
+        tracks = [{"title": track.title, "id": track.id} for track in sorted(lib_artist.get_tracks(), key=lambda x: x.title)]
+        return {"request": "ok", "tracks": tracks, "artist_name": lib_artist.name}
     if artist and album:
-        tracks = dict([(track.title, track.id) for track in library.get_artist(artist).get_album(album).get_tracks()])
+        lib_artist = library.get_artist(artist)
+        lib_album = lib_artist.get_album(album)
+        tracks = [{"title": track.title, "id": track.id} for track in sorted(lib_album.get_tracks(), key=lambda x: x.title)]
+        return {"request": "ok", "tracks": tracks, "artist_name": lib_artist.name, "album_name": lib_album.name}
     if not artist and not album:
-        tracks = dict([(track.title, track.id) for track in library.get_tracks()])
+        tracks = [{"title": track.title, "id": track.id} for track in sorted(library.get_tracks().values(), key=lambda x: x.title)]
     return {"request": "ok", "tracks": tracks}
 
 
@@ -127,6 +165,7 @@ def handle_message(data, conn):
     del datacpy["request"]
     if "msgid" in datacpy:
         del datacpy["msgid"]
+    print datacpy
     ret = target(**datacpy)
     if "msgid" in data:
         ret["msgid"] = data["msgid"]

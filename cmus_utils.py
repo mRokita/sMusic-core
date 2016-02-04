@@ -15,7 +15,6 @@ TYPE_TRACK = 3
 
 PATTERN_STATUS = re.compile("(?:tag|set)? ?([abcdefghijklmnopqrstuvxyz_]+) (.+)", re.DOTALL)
 
-
 class ModifiedPlayedTrack(Exception):
     def __init__(self, msg):
         super(ModifiedPlayedTrack, self).__init__(msg)
@@ -30,15 +29,22 @@ class Tag:
         except Exception:
             self.artist = "<Unknown>"
             self.album = "<Unknown>"
-            self.title = "<Unknown>"
+            self.title = None
 
 
 class TrackInfo:
     def __init__(self, path):
         sys.stdout.write(path+"\r")
         f = File(path, easy=True)
+        try:
+            self.length = f.info.length
+        except Exception:
+            self.length = None
         self.path = path
         self.tag = Tag(f)
+        if not self.tag.title:
+            self.tag.title = self.path
+
 
 class Artist:
         """
@@ -49,12 +55,16 @@ class Artist:
             self._library = library
             self.id = id_from_tag(name)
             self.name = name
+            self._tracks = list()
 
         def __str__(self):
             return "Artist(\"{}\", {})".format(self.name.encode("utf-8"), [str(album) for album in self._albums])
 
         def add_album(self, album):
             self._albums.append(album)
+
+        def add_track(self, track):
+            self._tracks.append(track)
 
         def get_album(self, album):
             album_id = id_from_tag(album)
@@ -83,6 +93,7 @@ class Album:
 
     def add_track(self, track):
         self._tracks.append(track)
+        self.artist.add_track(track)
 
     def get_tracks(self):
         return list(self._tracks)
@@ -105,6 +116,7 @@ class Track:
         self.album = library.get_artist(id_from_tag(track.tag.artist)).get_album(id_from_tag(track.tag.album))
         self.artist = self.album.artist
         self.title = track.tag.title
+        self.length = track.length
         self.search_name = self.artist.id + self.album.id + self.id
         self.album.add_track(self)
 
@@ -235,6 +247,9 @@ def get_player_status():
         match = PATTERN_STATUS.findall(line)
         if match:
             status[match[0][0]] = match[0][1]
+    if "duration" in status:
+        duration = int(status["duration"])
+        status["duration_readable"] = "0".join(("%2.2s:%2.2s" % (int(duration // 60), int(duration % 60))).split(" "))
     return status
 
 
@@ -264,19 +279,27 @@ def set_vol(vol):
     exec_cmus_command("vol {0}%".format(vol))
 
 
-def set_queue(queue, skip=0):
+def add_to_queue(path):
+    exec_cmus_command("add -q {}".format(path))
+
+
+def add_to_queue_from_lib(lib, artist_id, album_id, track_id):
+    track = lib.get_artist(artist_id).get_album(album_id).get_track(track_id)
+    add_to_queue(track.file)
+
+def clear_queue():
+    exec_cmus_command("clear -q")
+
+
+def set_queue(queue):
     """
     Parametry:
         - list<string> queue: kolejka w formie ["scieżka1", "sciezka2", "sciezka3"]
     Zmienia kolejkę na zawartość queue
     """
-    exec_cmus_command("clear -q")
-    with open("/tmp/sMusic_queue.m3u", "w+") as fo:
-        fo.write("\n".join(queue[skip:]))
-    exec_cmus_command("add -q {0}".format("/tmp/sMusic_queue.m3u"))
-    os.remove("/tmp/sMusic_queue.m3u")
-    with open("/tmp/sMusic_cached_queue.m3u", "w+") as fo:
-        fo.write("\n".join(queue))
+    clear_queue()
+    for path in queue:
+        add_to_queue(path)
 
 
 def get_queue():
@@ -287,20 +310,13 @@ def get_queue():
     exec_cmus_command("save -q /tmp/getqueue.m3u")
     q = get_queue_from_disk("/tmp/getqueue.m3u")
     os.remove("/tmp/getqueue.m3u")
-    return q[:-1]
-
-
-def get_cached_queue():
-    """
-    Zwraca zcache'owaną kolejkę
-    """
-    return get_queue_from_disk("/tmp/sMusic_cached_queue.pl")
+    return q
 
 
 def get_queue_from_disk(uri):
     with open(uri) as fo:
         q = fo.read()
-    return q.split("\n")
+    return q.split("\n")[:-1]
 
 
 def get_current_library():
@@ -315,7 +331,7 @@ def get_current_library():
     else:
         return list()
     lib = list()
-    exec_cmus_command("save {}".format(path))
+    exec_cmus_command("save -l {}".format(path))
     with open(path) as fo:
         line = fo.readline()
         while line:
