@@ -22,13 +22,19 @@ class ModifiedPlayedTrack(Exception):
 
 class Tag:
     def __init__(self, tags):
-        try:
+        if tags and "artist" in tags and tags["artist"]:
             self.artist = tags["artist"][0]
-            self.album = tags["album"][0]
-            self.title = tags["title"][0]
-        except Exception:
+        elif tags and "performer" in tags and tags["performer"]:
+            self.artist = tags["performer"][0]
+        else:
             self.artist = "<Unknown>"
+        if tags and "album" in tags and tags["album"]:
+            self.album = tags["album"][0]
+        else:
             self.album = "<Unknown>"
+        if tags and "title" in tags and tags["title"]:
+            self.title = tags["title"][0]
+        else:
             self.title = None
 
 
