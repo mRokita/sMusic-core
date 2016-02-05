@@ -123,7 +123,7 @@ class Track:
         self.artist = self.album.artist
         self.title = track.tag.title
         self.length = track.length
-        self.search_name = self.artist.id + self.album.id + self.id
+        self.search_id = [id_from_tag(i) for i in self.title.split(" ")]
         self.album.add_track(self)
 
     def __str__(self):
@@ -173,6 +173,30 @@ class MusicLibrary:
             return self.__artists[id_from_tag(artist)]
         except KeyError:
             return None
+
+    def search_for_track(self, query):
+        queries = query.split(" ")
+        for i in range(len(queries)):
+            queries[i] = id_from_tag(queries[i])
+        results = []
+        for tracks_at_id in self.__tracks.values():
+            for track in tracks_at_id:
+                result = {"pts": 0.0, "track": track}
+                if track.id == "".join(queries):
+                    result["pts"] += 10.0
+                for q in queries:
+                    if q in track.search_id and len(queries) != 0:
+                        result["pts"] += 10.0/len(queries)
+                    if q in track.artist.id and len(q) > 4 and len(track.artist.id) != 0:
+                        result["pts"] += 10.0/(float(len(q))/float(len(track.artist.id)))
+                if result["pts"] != 0.0:
+                    results.append(result)
+        ret = []
+        for result in sorted(results, key=lambda x: -x["pts"]):
+            ret.append(result["track"])
+            if len(ret)>20:
+                break
+        return ret
 
     def get_track(self, track):
         """

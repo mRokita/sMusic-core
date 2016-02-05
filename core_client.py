@@ -182,6 +182,7 @@ if __name__ == "__main__":
     conn.connect((config.server_host, config.server_port))
     print "\rPołączono z serwerem!"
     print "Oczekiwanie na handshake..."
+    print [(track.title, track.album.name, track.artist.name) for track in library.search_for_track("Nothing else Metallica")]
     msg = conn.read()
     buff = ""
     while msg:
