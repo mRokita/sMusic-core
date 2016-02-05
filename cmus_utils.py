@@ -151,7 +151,9 @@ class MusicLibrary:
 
         if track_id not in [track.id for track in self.get_artist(artist_id).get_album(album_id).get_tracks()]:
             track = Track(self, track_info)
-            self.__tracks[track.id] = track
+            if track.id not in self.__tracks:
+                self.__tracks[track.id] = list()
+            self.__tracks[track.id].append(track)
 
     def add_artist(self, artist):
         self.__artists[artist.id] = artist
@@ -177,9 +179,10 @@ class MusicLibrary:
             return None
 
     def get_track_by_filename(self, filename):
-        for track in self.__tracks.values():
-            if track.file == filename:
-                return track
+        for track_group in self.__tracks.values():
+            for track in track_group:
+                if track.file == filename:
+                    return track
 
     def get_album(self, album):
         """
@@ -286,6 +289,7 @@ def add_to_queue(path):
 def add_to_queue_from_lib(lib, artist_id, album_id, track_id):
     track = lib.get_artist(artist_id).get_album(album_id).get_track(track_id)
     add_to_queue(track.file)
+
 
 def clear_queue():
     exec_cmus_command("clear -q")
