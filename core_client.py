@@ -1,3 +1,4 @@
+#!/usr/bin/python2
 # -*- coding: utf-8 -*-
 """
 Bardzo minimalny testowy klient TCP
@@ -13,9 +14,19 @@ from base64 import b64encode, b64decode
 from inspect import getargspec
 from threading import Thread
 from functools import partial
-
+__version__ = "0.1.0 Alpha"
 binds = {}
 PATTERN_MSG = re.compile("([ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=+/]*?)\n(.+)?", re.DOTALL)
+
+
+class IncompatibleVersions(Exception):
+    def __init__(self, msg):
+        super(IncompatibleVersions, self).__init__(msg)
+
+
+EXCEPTIONS = {
+    u"incompatibleVersions": IncompatibleVersions
+}
 
 
 def escape(msg):
@@ -44,7 +55,7 @@ def bind(function):
 @bind
 def type():
     print "\rWykonano handshake! Łączenie z serwerem zakończone."
-    return {"request": "ok", "type": "radio", "key": config.server_key}
+    return {"request": "ok", "type": "radio", "key": config.server_key, "version": __version__}
 
 
 @bind
@@ -163,6 +174,13 @@ def get_tracks(artist=None, album=None):
 
 
 @bind
+def error(type, comment, cat):
+    conn.close()
+    print "FATAL ERROR {}".format(cat)
+    raise EXCEPTIONS[type](comment)
+
+
+@bind
 def search_for_track(query):
     return {"request": "ok",
             "tracks": [{"title": track.title,
@@ -175,22 +193,22 @@ def search_for_track(query):
 
 
 def handle_message(data, conn):
-    print "RECEIVED: %s" % data
     target = binds[data["request"]]["target"]
     datacpy = dict(data)
     del datacpy["request"]
     if "msgid" in datacpy:
         del datacpy["msgid"]
-    print datacpy
     ret = target(**datacpy)
     if "msgid" in data:
         ret["msgid"] = data["msgid"]
-
     print "RETURNING: %s" % ret
     conn.send(escape(json.dumps(ret)))
 
 if __name__ == "__main__":
-    print "Analizowanie biblioteki..."
+    print "+---------------------------------------------+\n|"+\
+          ("sMusic-core v{}".format(__version__).center(45, " "))+"|\n|"+\
+          ("https://github.com/mRokita/sMusic-core").center(45, " ")+\
+          "|\n+---------------------------------------------+\n"
     library = cmus_utils.parse_current_library()
     print "\rZakończono analizowanie biblioteki."
     sys.stdout.write("Łączenie z serwerem...")
@@ -198,7 +216,6 @@ if __name__ == "__main__":
     conn.connect((config.server_host, config.server_port))
     print "\rPołączono z serwerem!"
     print "Oczekiwanie na handshake..."
-    print [(track.title, track.album.name, track.artist.name) for track in library.search_for_track("Nothing else Metallica")]
     msg = conn.read()
     buff = ""
     while msg:
@@ -207,6 +224,7 @@ if __name__ == "__main__":
             buff += parsed_msg[0][1]
             esc_string = parsed_msg[0][0]
             data = json.loads(un_escape(esc_string))
+            print "RECEIVED: %s" % data
             if "request" in data:
                 Thread(target=partial(handle_message, data, conn)).start()
         else:

@@ -15,6 +15,7 @@ TYPE_TRACK = 3
 
 PATTERN_STATUS = re.compile("(?:tag|set)? ?([abcdefghijklmnopqrstuvxyz_]+) (.+)", re.DOTALL)
 
+
 class ModifiedPlayedTrack(Exception):
     def __init__(self, msg):
         super(ModifiedPlayedTrack, self).__init__(msg)
@@ -40,7 +41,6 @@ class Tag:
 
 class TrackInfo:
     def __init__(self, path):
-        sys.stdout.write(path+"\r")
         f = File(path, easy=True)
         try:
             self.length = f.info.length
@@ -388,9 +388,14 @@ def parse_current_library():
     """
     lib_files = get_current_library()
     lib = MusicLibrary()
+    lib_length = len(lib_files)
+    i = 0
     for file in lib_files[:-1]:
         track_info = TrackInfo(file)
         lib.add_track(track_info)
+        sys.stdout.write("\rAnalizowanie biblioteki muzycznej... %d%%" % (i/lib_length*100))
+        sys.stdout.flush()
+        i += 1.0
     return lib
 
 
