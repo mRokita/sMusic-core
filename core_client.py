@@ -120,6 +120,7 @@ def set_queue_to_single_track(artist_id, album_id, track_id, start_playing=False
         cmus_utils.player_play()
     return {"request": "ok"}
 
+
 @bind
 def get_current_queue():
     q = cmus_utils.get_queue()
@@ -146,16 +147,31 @@ def get_tracks(artist=None, album=None):
     tracks = []
     if artist and not album:
         lib_artist = library.get_artist(artist)
-        tracks = [{"title": track.title, "id": track.id} for track in sorted(lib_artist.get_tracks(), key=lambda x: x.title)]
+        tracks = [{"title": track.title, "id": track.id} for track in sorted(lib_artist.get_tracks(),
+                                                                             key=lambda x: x.title)]
         return {"request": "ok", "tracks": tracks, "artist_name": lib_artist.name}
     if artist and album:
         lib_artist = library.get_artist(artist)
         lib_album = lib_artist.get_album(album)
-        tracks = [{"title": track.title, "id": track.id} for track in sorted(lib_album.get_tracks(), key=lambda x: x.title)]
+        tracks = [{"title": track.title, "id": track.id} for track in sorted(lib_album.get_tracks(),
+                                                                             key=lambda x: x.title)]
         return {"request": "ok", "tracks": tracks, "artist_name": lib_artist.name, "album_name": lib_album.name}
     if not artist and not album:
-        tracks = [{"title": track.title, "id": track.id} for track in sorted(library.get_tracks().values(), key=lambda x: x.title)]
+        tracks = [{"title": track.title, "id": track.id} for track in sorted(library.get_tracks().values(),
+                                                                             key=lambda x: x.title)]
     return {"request": "ok", "tracks": tracks}
+
+
+@bind
+def search_for_track(query):
+    return {"request": "ok",
+            "tracks": [{"title": track.title,
+                        "artist_name": track.artist.name,
+                        "album_name": track.album.name,
+                        "artist_id": track.artist.id,
+                        "album_id": track.album.id,
+                        "id": track.id} for track in library.search_for_track(query)]
+            }
 
 
 def handle_message(data, conn):

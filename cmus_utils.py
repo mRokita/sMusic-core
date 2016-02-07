@@ -187,8 +187,6 @@ class MusicLibrary:
                 for q in queries:
                     if q in track.search_id and len(queries) != 0:
                         result["pts"] += 10.0/len(queries)
-                    if q in track.artist.id and len(q) > 4 and len(track.artist.id) != 0:
-                        result["pts"] += 10.0/(float(len(q))/float(len(track.artist.id)))
                 if result["pts"] != 0.0:
                     results.append(result)
         ret = []
