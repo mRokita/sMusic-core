@@ -14,7 +14,7 @@ from base64 import b64encode, b64decode
 from inspect import getargspec
 from threading import Thread
 from functools import partial
-__version__ = "0.1.0 Alpha"
+__version__ = "0.1.1 Alpha"
 binds = {}
 PATTERN_MSG = re.compile("([ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=+/]*?)\n(.+)?", re.DOTALL)
 
@@ -159,17 +159,17 @@ def get_tracks(artist=None, album=None):
     if artist and not album:
         lib_artist = library.get_artist(artist)
         tracks = [{"title": track.title, "id": track.id} for track in sorted(lib_artist.get_tracks(),
-                                                                             key=lambda x: x.title)]
+                                                                             key=lambda x: [int(x.tracknumber), x.file])]
         return {"request": "ok", "tracks": tracks, "artist_name": lib_artist.name}
     if artist and album:
         lib_artist = library.get_artist(artist)
         lib_album = lib_artist.get_album(album)
         tracks = [{"title": track.title, "id": track.id} for track in sorted(lib_album.get_tracks(),
-                                                                             key=lambda x: x.title)]
+                                                                             key=lambda x: [x.tracknumber, x.file])]
         return {"request": "ok", "tracks": tracks, "artist_name": lib_artist.name, "album_name": lib_album.name}
     if not artist and not album:
         tracks = [{"title": track.title, "id": track.id} for track in sorted(library.get_tracks().values(),
-                                                                             key=lambda x: x.title)]
+                                                                             key=lambda x: [x.tracknumber, x.file])]
     return {"request": "ok", "tracks": tracks}
 
 

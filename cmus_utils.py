@@ -33,6 +33,12 @@ class Tag:
             self.album = tags["album"][0]
         else:
             self.album = "<Unknown>"
+        self.tracknumber = -1
+        if tags and "tracknumber" in tags and tags["tracknumber"]:
+            try:
+                self.tracknumber = int(tags["tracknumber"][0])
+            except ValueError:
+                pass
         if tags and "title" in tags and tags["title"]:
             self.title = tags["title"][0]
         else:
@@ -123,6 +129,7 @@ class Track:
         self.artist = self.album.artist
         self.title = track.tag.title
         self.length = track.length
+        self.tracknumber = track.tag.tracknumber
         self.search_id = [id_from_tag(i) for i in self.title.split(" ")]
         self.album.add_track(self)
 
