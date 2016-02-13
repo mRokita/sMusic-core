@@ -1,5 +1,5 @@
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import cmus_utils
 import config
@@ -9,7 +9,7 @@ przerwy = []
 
 
 def get_dzwonki_time():
-    return datetime.now().time();
+    return (datetime.now() + timedelta(milliseconds=config.clock_correction)).time();
 
 
 class Przerwa:
