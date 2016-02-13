@@ -126,6 +126,7 @@ def clear_queue():
 
 
 @bind
+@breaks.requires_unlocked
 def set_queue_to_single_track(artist_id, album_id, track_id, start_playing=False):
     cmus_utils.clear_queue()
     cmus_utils.add_to_queue_from_lib(library, artist_id, album_id, track_id)
