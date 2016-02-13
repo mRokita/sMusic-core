@@ -291,6 +291,10 @@ def get_player_status():
     return status
 
 
+def is_playing():
+    return get_player_status()["status"] == "playing"
+
+
 def player_pause():
     if get_player_status()["status"] != "paused":
         exec_cmus_command("player-pause")
