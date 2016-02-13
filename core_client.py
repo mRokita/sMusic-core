@@ -14,6 +14,8 @@ from base64 import b64encode, b64decode
 from inspect import getargspec
 from threading import Thread
 from functools import partial
+import breaks_controler as breaks
+
 __version__ = "0.1.1 Alpha"
 binds = {}
 PATTERN_MSG = re.compile("([ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=+/]*?)\n(.+)?", re.DOTALL)
@@ -70,10 +72,10 @@ def status():
 
 
 @bind
+@breaks.requires_unlocked
 def play():
     cmus_utils.player_play()
     return {"request": "ok", "status": cmus_utils.get_player_status()}
-
 
 @bind
 def set_vol(value):
@@ -82,12 +84,14 @@ def set_vol(value):
 
 
 @bind
+@breaks.requires_unlocked
 def play_next():
     cmus_utils.player_next()
     return {"request": "ok", "status": cmus_utils.get_player_status()}
 
 
 @bind
+@breaks.requires_unlocked
 def play_prev():
     cmus_utils.player_prev()
     return {"request": "ok", "status": cmus_utils.get_player_status()}
@@ -204,6 +208,7 @@ def handle_message(data, conn):
     print "RETURNING: %s" % ret
     conn.send(escape(json.dumps(ret)))
 
+
 if __name__ == "__main__":
     print "+---------------------------------------------+\n|"+\
           ("sMusic-core v{}".format(__version__).center(45, " "))+"|\n|"+\
@@ -211,6 +216,10 @@ if __name__ == "__main__":
           "|\n+---------------------------------------------+\n"
     library = cmus_utils.parse_current_library()
     print "\rZakończono analizowanie biblioteki."
+    print "Ladowanie przerw..."
+    breaks.load_breaks()
+    print "Zaladowano przerwy"
+    Thread(target=breaks.breaks_controller).start()
     sys.stdout.write("Łączenie z serwerem...")
     conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
     conn.connect((config.server_host, config.server_port))
