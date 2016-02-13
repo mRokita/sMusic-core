@@ -49,7 +49,7 @@ def breaks_controller():
         else:
             if paused < 30:
                 if paused == 0:
-                    was_playing = is_playing()
+                    was_playing = cmus_utils.is_playing()
                     print "blokowanie, czy trwalo odtwarzanie: ", was_playing
                 paused += 1
                 print "b..."

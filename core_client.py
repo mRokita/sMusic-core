@@ -68,7 +68,9 @@ def pause():
 
 @bind
 def status():
-    return {"request": "ok", "status": cmus_utils.get_player_status()}
+    stat = cmus_utils.get_player_status()
+    stat["locked"] = not breaks.is_unlocked()
+    return {"request": "ok", "status": stat}
 
 
 @bind

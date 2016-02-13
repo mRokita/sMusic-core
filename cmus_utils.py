@@ -292,7 +292,7 @@ def get_player_status():
 
 
 def is_playing():
-    return cmus_utils.get_player_status()["status"] == "playing"
+    return get_player_status()["status"] == "playing"
 
 
 def player_pause():
