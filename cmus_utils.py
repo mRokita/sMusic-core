@@ -27,19 +27,21 @@ class Tag:
     def __init__(self, tags):
         if not tags:
             tags = {}
-        defs = {"artist": "Nieznany album",
+        defs = {"artist": "Nieznany wykonawca",
                 "album": "Nieznany album",
                 "title": None,
                 "tracknumber": -1,
                 "year": "0000",
                 "date": "0000",
+                "performer": "Nieznany wykonawca"
                 }
         for key in defs:
             if key in tags and tags[key]:
                 setattr(self, key, tags[key][0])
-
             elif key in defs:
                 setattr(self, key, defs[key])
+        if self.performer != defs["performer"] and self.artist == defs["artist"]:
+            self.artist = self.performer
         date = PATTERN_DATE.findall(self.date)
         if date:
             setattr(self, "year", date[0])
