@@ -23,26 +23,11 @@ class ModifiedPlayedTrack(Exception):
 
 class Tag:
     def __init__(self, tags):
-        if tags and "artist" in tags and tags["artist"]:
-            self.artist = tags["artist"][0]
-        elif tags and "performer" in tags and tags["performer"]:
-            self.artist = tags["performer"][0]
-        else:
-            self.artist = "<Unknown>"
-        if tags and "album" in tags and tags["album"]:
-            self.album = tags["album"][0]
-        else:
-            self.album = "<Unknown>"
-        self.tracknumber = -1
-        if tags and "tracknumber" in tags and tags["tracknumber"]:
-            try:
-                self.tracknumber = int(tags["tracknumber"][0])
-            except ValueError:
-                pass
-        if tags and "title" in tags and tags["title"]:
-            self.title = tags["title"][0]
-        else:
-            self.title = None
+         +        for i in tags:
++            if tags[tags[i]]:
++                setattr(self, i, tags[i])
++            else:
++                setattr(self, i, "<Unknown>")
 
 
 class TrackInfo:
@@ -91,17 +76,22 @@ class Artist:
 class Album:
     """
     Klasa reprezentująca album
+     name - nazwa albumu [string]
+     library - biblioteka [MusicLibrary]
+     artist_id - nazwa artysty [string]
+     year - rok [string -> int]
     """
-    def __init__(self, library, artist_id, name):
+    def __init__(self, library, artist_id, name, year):
         self._tracks = list()
         self._library = library
         self.id = id_from_tag(name)
         self.name = name
         self.artist = library.get_artist(artist_id)
         self.artist.add_album(self)
+        self.year = int(year)
 
     def __str__(self):
-        return "Album({}, {})".format(self.name.encode("utf-8"), [str(track) for track in self._tracks])
+        return "Album({}, {}, {})".format(self.name.encode("utf-8"), [str(track) for track in self._tracks], self.year)
 
     def add_track(self, track):
         self._tracks.append(track)
@@ -120,6 +110,8 @@ class Album:
 class Track:
     """
     Klasa reprezentująca utwór
+    library - [MusicLirary]
+    track - [TrackInfo]
     """
     def __init__(self, library, track):
         self.file = track.path
@@ -132,6 +124,7 @@ class Track:
         self.tracknumber = track.tag.tracknumber
         self.search_id = [id_from_tag(i) for i in self.title.split(" ")]
         self.album.add_track(self)
+        self.year = track.date
 
     def __str__(self):
         return self.title.encode("utf-8")
