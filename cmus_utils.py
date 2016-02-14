@@ -6,6 +6,7 @@ Moduł zawierający funkcje kontrolujące CMUSa
 from subprocess import check_output
 import os
 import re
+from copy import deepcopy
 from mutagen import File
 import sys
 
@@ -14,6 +15,7 @@ TYPE_ALBUM = 2
 TYPE_TRACK = 3
 
 PATTERN_STATUS = re.compile("(?:tag|set)? ?([abcdefghijklmnopqrstuvxyz_]+) (.+)", re.DOTALL)
+PATTERN_DATE = re.compile("\d\d\d\d")
 
 
 class ModifiedPlayedTrack(Exception):
@@ -23,11 +25,24 @@ class ModifiedPlayedTrack(Exception):
 
 class Tag:
     def __init__(self, tags):
-         for i in tags:
-             if tags[tags[i]]:
-                 setattr(self, i, tags[i])
-             else:
-                 setattr(self, i, "<Unknown>")
+        if not tags:
+            tags = {}
+        defs = {"artist": "Nieznany album",
+                "album": "Nieznany album",
+                "title": None,
+                "tracknumber": -1,
+                "year": "0000",
+                "date": "0000",
+                }
+        for key in defs:
+            if key in tags and tags[key]:
+                setattr(self, key, tags[key][0])
+
+            elif key in defs:
+                setattr(self, key, defs[key])
+        date = PATTERN_DATE.findall(self.date)
+        if date:
+            setattr(self, "year", date[0])
 
 
 class TrackInfo:
@@ -88,7 +103,7 @@ class Album:
         self.name = name
         self.artist = library.get_artist(artist_id)
         self.artist.add_album(self)
-        self.year = int(year)
+        self.year = year
 
     def __str__(self):
         return "Album({}, {}, {})".format(self.name.encode("utf-8"), [str(track) for track in self._tracks], self.year)
@@ -124,7 +139,7 @@ class Track:
         self.tracknumber = track.tag.tracknumber
         self.search_id = [id_from_tag(i) for i in self.title.split(" ")]
         self.album.add_track(self)
-        self.year = track.date
+        self.year = track.tag.year
 
     def __str__(self):
         return self.title.encode("utf-8")
@@ -148,7 +163,7 @@ class MusicLibrary:
         album_id = id_from_tag(track_info.tag.album)
 
         if album_id not in [a.id for a in artist.get_albums()]:
-            album = Album(self, artist_id, track_info.tag.album)
+            album = Album(self, artist_id, track_info.tag.album, track_info.tag.year)
             if album.id not in self.__albums:
                 self.__albums[album.id] = [album]
             else:

@@ -129,11 +129,11 @@ def get_albums(artist=None):
     if artist:
         lib_artist = library.get_artist(artist)
         albums = [{"name": album.name, "id": album.id} for album in sorted(lib_artist.get_albums(),
-                                                                            key=lambda x: (x.date, x.name))]
+                                                                            key=lambda x: (int(x.year), x.name))]
         return {"request": "ok", "albums": albums, "artist_name": lib_artist.name}
     else:
         albums = [{"name": album.name, "id": album.id} for album in sorted(library.get_albums().values(),
-                                                                            key=lambda x: (x.date, x.name))]
+                                                                            key=lambda x: (int(x.year), x.name))]
     return {"request": "ok", "albums": albums}
 
 
