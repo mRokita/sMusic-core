@@ -23,11 +23,11 @@ class ModifiedPlayedTrack(Exception):
 
 class Tag:
     def __init__(self, tags):
-         +        for i in tags:
-+            if tags[tags[i]]:
-+                setattr(self, i, tags[i])
-+            else:
-+                setattr(self, i, "<Unknown>")
+         for i in tags:
+             if tags[tags[i]]:
+                 setattr(self, i, tags[i])
+             else:
+                 setattr(self, i, "<Unknown>")
 
 
 class TrackInfo:
