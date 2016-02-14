@@ -14,11 +14,30 @@ from base64 import b64encode, b64decode
 from inspect import getargspec
 from threading import Thread
 from functools import partial
-import breaks_controler as breaks
+import gaps_controller as gaps
+import time
 
 __version__ = "0.1.1 Alpha"
 binds = {}
 PATTERN_MSG = re.compile("([ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=+/]*?)\n(.+)?", re.DOTALL)
+was_interrupted = False
+conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+
+
+class InterruptionChecker:
+    def __init__(self):
+        self.__was_interrupted = False
+
+    def wait_for_interruption(self):
+            try:
+                while True:
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                print "INTERRUPTION"
+                self.__was_interrupted = True
+
+    def was_interrupted(self):
+        return self.__was_interrupted
 
 
 class IncompatibleVersions(Exception):
@@ -69,12 +88,12 @@ def pause():
 @bind
 def status():
     stat = cmus_utils.get_player_status()
-    stat["locked"] = not breaks.is_unlocked()
+    stat["locked"] = not gaps.is_unlocked()
     return {"request": "ok", "status": stat}
 
 
 @bind
-@breaks.requires_unlocked
+@gaps.requires_unlocked
 def play():
     cmus_utils.player_play()
     return {"request": "ok", "status": cmus_utils.get_player_status()}
@@ -86,14 +105,14 @@ def set_vol(value):
 
 
 @bind
-@breaks.requires_unlocked
+@gaps.requires_unlocked
 def play_next():
     cmus_utils.player_next()
     return {"request": "ok", "status": cmus_utils.get_player_status()}
 
 
 @bind
-@breaks.requires_unlocked
+@gaps.requires_unlocked
 def play_prev():
     cmus_utils.player_prev()
     return {"request": "ok", "status": cmus_utils.get_player_status()}
@@ -128,7 +147,7 @@ def clear_queue():
 
 
 @bind
-@breaks.requires_unlocked
+@gaps.requires_unlocked
 def set_queue_to_single_track(artist_id, album_id, track_id, start_playing=False):
     cmus_utils.clear_queue()
     cmus_utils.add_to_queue_from_lib(library, artist_id, album_id, track_id)
@@ -212,6 +231,38 @@ def handle_message(data, conn):
     conn.send(escape(json.dumps(ret)))
 
 
+class ConnectionThread(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        self.daemon = True
+        self.__was_stopped = False
+        sys.stdout.write("Łączenie z serwerem...")
+        self.conn = conn
+        self.conn.connect((config.server_host, config.server_port))
+        print "\rPołączono z serwerem!"
+
+    def run(self):
+        print "Oczekiwanie na handshake..."
+        buff = ""
+        msg = conn.read()
+        while msg and not self.__was_stopped:
+            parsed_msg = PATTERN_MSG.findall(msg)
+            if len(parsed_msg) == 1 and len(parsed_msg[0]) == 2:
+                buff += parsed_msg[0][1]
+                esc_string = parsed_msg[0][0]
+                data = json.loads(un_escape(esc_string))
+                print "RECEIVED: %s" % data
+                if "request" in data:
+                    Thread(target=partial(handle_message, data, conn)).start()
+            else:
+                buff = ""
+            msg = conn.read()
+
+    def stop(self):
+        self.__was_stopped = True
+        conn.close()
+
+
 if __name__ == "__main__":
     print "+---------------------------------------------+\n|"+\
           ("sMusic-core v{}".format(__version__).center(45, " "))+"|\n|"+\
@@ -219,26 +270,20 @@ if __name__ == "__main__":
           "|\n+---------------------------------------------+\n"
     library = cmus_utils.parse_current_library()
     print "\rZakończono analizowanie biblioteki."
-    print "Ladowanie przerw..."
-    breaks.load_breaks()
-    print "Zaladowano przerwy"
-    Thread(target=breaks.breaks_controller).start()
-    sys.stdout.write("Łączenie z serwerem...")
-    conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
-    conn.connect((config.server_host, config.server_port))
-    print "\rPołączono z serwerem!"
-    print "Oczekiwanie na handshake..."
-    msg = conn.read()
-    buff = ""
-    while msg:
-        parsed_msg = PATTERN_MSG.findall(msg)
-        if len(parsed_msg) == 1 and len(parsed_msg[0]) == 2:
-            buff += parsed_msg[0][1]
-            esc_string = parsed_msg[0][0]
-            data = json.loads(un_escape(esc_string))
-            print "RECEIVED: %s" % data
-            if "request" in data:
-                Thread(target=partial(handle_message, data, conn)).start()
-        else:
-            buff = ""
-        msg = conn.read()
+    print "Ładowanie przerw..."
+    gaps.load_gaps()
+    thread_gap = gaps.GapThread()
+    thread_gap.start()
+    thread_conn = ConnectionThread()
+    thread_conn.start()
+    try:
+        while True:
+            time.sleep(100)
+    except (KeyboardInterrupt, SystemExit):
+        print "\nZatrzymywanie kontroli przerw..."
+        thread_gap.stop()
+        print "Zatrzymano kontrolę przerw!\nRozłączanie z serwerem..."
+        thread_conn.stop()
+        print "Rozłączono z serwerem!"
+
+
