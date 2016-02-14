@@ -106,12 +106,15 @@ def get_artists():
 
 @bind
 def get_albums(artist=None):
+    # album - [Album]
     if artist:
         lib_artist = library.get_artist(artist)
-        albums = [{"name": album.name, "id": album.id} for album in sorted(lib_artist.get_albums(), key=lambda x: x.name)]
+        albums = [{"name": album.name, "id": album.id} for album in sorted(lib_artist.get_albums(),
+                                                                            key=lambda x: (x.date, x.name))]
         return {"request": "ok", "albums": albums, "artist_name": lib_artist.name}
     else:
-        albums = [{"name": album.name, "id": album.id} for album in sorted(library.get_albums().values(), key=lambda x: x.name)]
+        albums = [{"name": album.name, "id": album.id} for album in sorted(library.get_albums().values(),
+                                                                            key=lambda x: (x.date, x.name))]
     return {"request": "ok", "albums": albums}
 
 
