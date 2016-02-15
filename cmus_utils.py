@@ -152,12 +152,9 @@ class MusicLibrary:
         if not os.path.exists("index"):
             os.mkdir("index")
         self.__ix = create_in("index", schema)
-        self.__writer = ix.writer()
-
-    def commit_index(self):
-        self.__writer.commit()
 
     def add_track(self, track_info):
+        writer = self.__ix.writer()
         artist_id = id_from_tag(track_info.tag.artist)
 
         if artist_id not in self.__artists:
@@ -181,8 +178,9 @@ class MusicLibrary:
             if track.id not in self.__tracks:
                 self.__tracks[track.id] = list()
             self.__tracks[track.id].append(track)
-            self.__writer.add_document(title=track.title, artist=track.artist.name, album=track.album.name, object=track)
-        self.commit_index()
+            writer.add_document(title=unicode(track.title), artist=unicode(track.artist.name),
+                                     album=unicode(track.album.name), object=track)
+        writer.commit()
 
     def add_artist(self, artist):
         self.__artists[artist.id] = artist
@@ -209,28 +207,28 @@ class MusicLibrary:
                     break
             return ret
 
-'''
-queries = query.split(" ")
-for i in range(len(queries)):
-    queries[i] = id_from_tag(queries[i])
-results = []
-for tracks_at_id in self.__tracks.values():
-    for track in tracks_at_id:
-        result = {"pts": 0.0, "track": track}
-        if track.id == "".join(queries):
-            result["pts"] += 10.0
-        for q in queries:
-            if q in track.search_id and len(queries) != 0:
-                result["pts"] += 10.0/len(queries)
-        if result["pts"] != 0.0:
-            results.append(result)
-ret = []
-for result in sorted(results, key=lambda x: -x["pts"]):
-    ret.append(result["track"])
-    if len(ret)>20:
-        break
-return ret
-'''
+    '''
+    queries = query.split(" ")
+    for i in range(len(queries)):
+        queries[i] = id_from_tag(queries[i])
+    results = []
+    for tracks_at_id in self.__tracks.values():
+        for track in tracks_at_id:
+            result = {"pts": 0.0, "track": track}
+            if track.id == "".join(queries):
+                result["pts"] += 10.0
+            for q in queries:
+                if q in track.search_id and len(queries) != 0:
+                    result["pts"] += 10.0/len(queries)
+            if result["pts"] != 0.0:
+                results.append(result)
+    ret = []
+    for result in sorted(results, key=lambda x: -x["pts"]):
+        ret.append(result["track"])
+        if len(ret)>20:
+            break
+    return ret
+    '''
 
     def get_track(self, track):
         """
