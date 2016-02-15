@@ -8,6 +8,11 @@ import os
 import re
 from mutagen import File
 import sys
+import os.path
+from whoosh.index import create_in, open_dir
+from whoosh.fields import Schema, STORED, ID, KEYWORD, TEXT
+from whoosh.query import *
+from whoosh.qparser import QueryParser
 
 TYPE_ARTIST = 1
 TYPE_ALBUM = 2
@@ -130,7 +135,7 @@ class Track:
         self.title = track.tag.title
         self.length = track.length
         self.tracknumber = track.tag.tracknumber
-        self.search_id = [id_from_tag(i) for i in self.title.split(" ")]
+        #self.search_id = [id_from_tag(i) for i in self.title.split(" ")]
         self.album.add_track(self)
 
     def __str__(self):
@@ -142,6 +147,15 @@ class MusicLibrary:
         self.__artists = dict()
         self.__albums = dict()
         self.__tracks = dict()
+
+        schema = Schema(title=TEXT, artist=TEXT, album=TEXT, object=STORED)
+        if not os.path.exists("index"):
+            os.mkdir("index")
+        self.__ix = create_in("index", schema)
+        self.__writer = ix.writer()
+
+    def commit_index(self):
+        self.__writer.commit()
 
     def add_track(self, track_info):
         artist_id = id_from_tag(track_info.tag.artist)
@@ -167,6 +181,8 @@ class MusicLibrary:
             if track.id not in self.__tracks:
                 self.__tracks[track.id] = list()
             self.__tracks[track.id].append(track)
+            self.__writer.add_document(title=track.title, artist=track.artist.name, album=track.album.name, object=track)
+        self.commit_index()
 
     def add_artist(self, artist):
         self.__artists[artist.id] = artist
@@ -181,27 +197,40 @@ class MusicLibrary:
         except KeyError:
             return None
 
-    def search_for_track(self, query):
-        queries = query.split(" ")
-        for i in range(len(queries)):
-            queries[i] = id_from_tag(queries[i])
-        results = []
-        for tracks_at_id in self.__tracks.values():
-            for track in tracks_at_id:
-                result = {"pts": 0.0, "track": track}
-                if track.id == "".join(queries):
-                    result["pts"] += 10.0
-                for q in queries:
-                    if q in track.search_id and len(queries) != 0:
-                        result["pts"] += 10.0/len(queries)
-                if result["pts"] != 0.0:
-                    results.append(result)
-        ret = []
-        for result in sorted(results, key=lambda x: -x["pts"]):
-            ret.append(result["track"])
-            if len(ret)>20:
-                break
-        return ret
+    def search_for_track(self, querystring):
+        with self.__ix.searcher() as searcher:
+            parser = QueryParser("content", self.__ix.schema)
+            myquery = parser.parse(querystring)
+            results = searcher.search(myquery)
+            ret = []
+            for result in results:
+                ret.append(result["object"])
+                if len(ret) > 20:
+                    break
+            return ret
+
+'''
+queries = query.split(" ")
+for i in range(len(queries)):
+    queries[i] = id_from_tag(queries[i])
+results = []
+for tracks_at_id in self.__tracks.values():
+    for track in tracks_at_id:
+        result = {"pts": 0.0, "track": track}
+        if track.id == "".join(queries):
+            result["pts"] += 10.0
+        for q in queries:
+            if q in track.search_id and len(queries) != 0:
+                result["pts"] += 10.0/len(queries)
+        if result["pts"] != 0.0:
+            results.append(result)
+ret = []
+for result in sorted(results, key=lambda x: -x["pts"]):
+    ret.append(result["track"])
+    if len(ret)>20:
+        break
+return ret
+'''
 
     def get_track(self, track):
         """
