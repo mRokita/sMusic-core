@@ -9,6 +9,14 @@ import re
 from copy import deepcopy
 from mutagen import File
 import sys
+import os.path
+
+from whoosh import qparser
+from whoosh.index import create_in, open_dir
+from whoosh.fields import Schema, STORED, TEXT, NGRAMWORDS
+from whoosh.query import *
+from whoosh.qparser import FuzzyTermPlugin, MultifieldParser
+from whoosh.analysis import NgramWordAnalyzer
 
 TYPE_ARTIST = 1
 TYPE_ALBUM = 2
@@ -139,7 +147,6 @@ class Track:
         self.title = track.tag.title
         self.length = track.length
         self.tracknumber = track.tag.tracknumber
-        self.search_id = [id_from_tag(i) for i in self.title.split(" ")]
         self.album.add_track(self)
         self.year = track.tag.year
 
@@ -152,8 +159,15 @@ class MusicLibrary:
         self.__artists = dict()
         self.__albums = dict()
         self.__tracks = dict()
+        analyzer = NgramWordAnalyzer(minsize=3)
+        schema = Schema(title=TEXT(analyzer=analyzer, phrase=False), artist=TEXT(analyzer=analyzer, phrase=False),
+                        album=TEXT(analyzer=analyzer, phrase=False), object=STORED)
+        if not os.path.exists("index"):
+            os.mkdir("index")
+        self.ix = create_in("index", schema)
 
-    def add_track(self, track_info):
+    def add_track_internal(self, track_info, writer):
+
         artist_id = id_from_tag(track_info.tag.artist)
 
         if artist_id not in self.__artists:
@@ -177,6 +191,13 @@ class MusicLibrary:
             if track.id not in self.__tracks:
                 self.__tracks[track.id] = list()
             self.__tracks[track.id].append(track)
+            writer.add_document(title=unicode(track.title), artist=unicode(track.artist.name),
+                                album=unicode(track.album.name), object=track)
+
+    def add_track(self, track_info):
+        writer = self.ix.writer()
+        self.add_track_internal(track_info, writer)
+        writer.commit()
 
     def add_artist(self, artist):
         self.__artists[artist.id] = artist
@@ -191,27 +212,20 @@ class MusicLibrary:
         except KeyError:
             return None
 
-    def search_for_track(self, query):
-        queries = query.split(" ")
-        for i in range(len(queries)):
-            queries[i] = id_from_tag(queries[i])
-        results = []
-        for tracks_at_id in self.__tracks.values():
-            for track in tracks_at_id:
-                result = {"pts": 0.0, "track": track}
-                if track.id == "".join(queries):
-                    result["pts"] += 10.0
-                for q in queries:
-                    if q in track.search_id and len(queries) != 0:
-                        result["pts"] += 10.0/len(queries)
-                if result["pts"] != 0.0:
-                    results.append(result)
-        ret = []
-        for result in sorted(results, key=lambda x: -x["pts"]):
-            ret.append(result["track"])
-            if len(ret)>20:
-                break
-        return ret
+    def search_for_track(self, querystring):
+        if len(querystring) >= 3:
+            with self.ix.searcher() as searcher:
+                parser = MultifieldParser(["artist", "album", "title"], self.ix.schema)
+                parser.add_plugin(qparser.FuzzyTermPlugin())
+                myquery = parser.parse(querystring)
+                results = searcher.search(myquery, limit=20)
+                if len(results) == 0:
+                    myquery = parser.parse(" ".join(word+"~2" for word in querystring.split()))
+                    results = searcher.search(myquery, limit=20)
+                ret = [result["object"] for result in results]
+                return ret
+        else:
+            return []
 
     def get_track(self, track):
         """
@@ -411,12 +425,17 @@ def parse_current_library():
     lib = MusicLibrary()
     lib_length = len(lib_files)
     i = 0
+    writer = lib.ix.writer()
     for file in lib_files[:-1]:
         track_info = TrackInfo(file)
-        lib.add_track(track_info)
+        lib.add_track_internal(track_info,writer)
         sys.stdout.write("\rAnalizowanie biblioteki muzycznej... %d%%" % (i/lib_length*100))
         sys.stdout.flush()
         i += 1.0
+    writer.commit()
+    sys.stdout.write("\rOptymalizacja index-u...                            ")
+    sys.stdout.flush()
+    lib.ix.optimize()
     return lib
 
 
