@@ -9,10 +9,12 @@ import re
 from mutagen import File
 import sys
 import os.path
+
+from whoosh import qparser
 from whoosh.index import create_in, open_dir
-from whoosh.fields import Schema, STORED, ID, KEYWORD, TEXT
+from whoosh.fields import Schema, STORED, TEXT, NGRAMWORDS
 from whoosh.query import *
-from whoosh.qparser import QueryParser
+from whoosh.qparser import FuzzyTermPlugin, MultifieldParser
 
 TYPE_ARTIST = 1
 TYPE_ALBUM = 2
@@ -135,7 +137,6 @@ class Track:
         self.title = track.tag.title
         self.length = track.length
         self.tracknumber = track.tag.tracknumber
-        #self.search_id = [id_from_tag(i) for i in self.title.split(" ")]
         self.album.add_track(self)
 
     def __str__(self):
@@ -148,7 +149,7 @@ class MusicLibrary:
         self.__albums = dict()
         self.__tracks = dict()
 
-        schema = Schema(title=TEXT, artist=TEXT, album=TEXT, object=STORED)
+        schema = Schema(title=NGRAMWORDS, artist=NGRAMWORDS, album=NGRAMWORDS, object=STORED)
         if not os.path.exists("index"):
             os.mkdir("index")
         self.__ix = create_in("index", schema)
@@ -182,6 +183,9 @@ class MusicLibrary:
                                      album=unicode(track.album.name), object=track)
         writer.commit()
 
+    def optimize_index(self):
+        self.__ix.optimize()
+
     def add_artist(self, artist):
         self.__artists[artist.id] = artist
 
@@ -197,38 +201,15 @@ class MusicLibrary:
 
     def search_for_track(self, querystring):
         with self.__ix.searcher() as searcher:
-            parser = QueryParser("content", self.__ix.schema)
+            parser = MultifieldParser(["artist", "album", "title"], self.__ix.schema)
+            parser.add_plugin(qparser.FuzzyTermPlugin())
             myquery = parser.parse(querystring)
-            results = searcher.search(myquery)
-            ret = []
-            for result in results:
-                ret.append(result["object"])
-                if len(ret) > 20:
-                    break
+            results = searcher.search(myquery, limit=20)
+            if len(results) == 0:
+                myquery = parser.parse(" ".join(word+"~2" for word in querystring.split()))
+                results = searcher.search(myquery, limit=20)
+            ret = [result["object"] for result in results]
             return ret
-
-    '''
-    queries = query.split(" ")
-    for i in range(len(queries)):
-        queries[i] = id_from_tag(queries[i])
-    results = []
-    for tracks_at_id in self.__tracks.values():
-        for track in tracks_at_id:
-            result = {"pts": 0.0, "track": track}
-            if track.id == "".join(queries):
-                result["pts"] += 10.0
-            for q in queries:
-                if q in track.search_id and len(queries) != 0:
-                    result["pts"] += 10.0/len(queries)
-            if result["pts"] != 0.0:
-                results.append(result)
-    ret = []
-    for result in sorted(results, key=lambda x: -x["pts"]):
-        ret.append(result["track"])
-        if len(ret)>20:
-            break
-    return ret
-    '''
 
     def get_track(self, track):
         """
@@ -434,6 +415,7 @@ def parse_current_library():
         sys.stdout.write("\rAnalizowanie biblioteki muzycznej... %d%%" % (i/lib_length*100))
         sys.stdout.flush()
         i += 1.0
+    lib.optimize_index()
     return lib
 
 
