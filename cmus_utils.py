@@ -203,16 +203,19 @@ class MusicLibrary:
             return None
 
     def search_for_track(self, querystring):
-        with self.ix.searcher() as searcher:
-            parser = MultifieldParser(["artist", "album", "title"], self.ix.schema)
-            parser.add_plugin(qparser.FuzzyTermPlugin())
-            myquery = parser.parse(querystring)
-            results = searcher.search(myquery, limit=20)
-            if len(results) == 0:
-                myquery = parser.parse(" ".join(word+"~2" for word in querystring.split()))
+        if len(querystring) >= 3:
+            with self.ix.searcher() as searcher:
+                parser = MultifieldParser(["artist", "album", "title"], self.ix.schema)
+                parser.add_plugin(qparser.FuzzyTermPlugin())
+                myquery = parser.parse(querystring)
                 results = searcher.search(myquery, limit=20)
-            ret = [result["object"] for result in results]
-            return ret
+                if len(results) == 0:
+                    myquery = parser.parse(" ".join(word+"~2" for word in querystring.split()))
+                    results = searcher.search(myquery, limit=20)
+                ret = [result["object"] for result in results]
+                return ret
+        else:
+            return []
 
     def get_track(self, track):
         """
