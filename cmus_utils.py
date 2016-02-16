@@ -17,6 +17,7 @@ from whoosh.fields import Schema, STORED, TEXT, NGRAMWORDS
 from whoosh.query import *
 from whoosh.qparser import FuzzyTermPlugin, MultifieldParser
 from whoosh.analysis import NgramWordAnalyzer
+from whoosh.collectors import TimeLimitCollector, TimeLimit
 
 TYPE_ARTIST = 1
 TYPE_ALBUM = 2
@@ -215,14 +216,21 @@ class MusicLibrary:
     def search_for_track(self, querystring):
         if len(querystring) >= 3:
             with self.ix.searcher() as searcher:
+                colector = searcher.collector(limit=20)
+                tlc = TimeLimitCollector(colector, timelimit=0.7, use_alarm=False)
                 parser = MultifieldParser(["artist", "album", "title"], self.ix.schema)
                 parser.add_plugin(qparser.FuzzyTermPlugin())
                 myquery = parser.parse(querystring)
-                results = searcher.search(myquery, limit=20)
-                if len(results) == 0:
-                    myquery = parser.parse(" ".join(word+"~2" for word in querystring.split()))
-                    results = searcher.search(myquery, limit=20)
-                ret = [result["object"] for result in results]
+                try:
+                    searcher.search_with_collector(myquery, tlc)
+                    print "a", tlc.results()
+                    if len(tlc.results()) == 0:
+                        myquery = parser.parse(" ".join(word+"~2" for word in querystring.split()))
+                        searcher.search_with_collector(myquery, tlc)
+                except TimeLimit:
+                    print "Time Limit for query reached!"
+                print "b", tlc.results()
+                ret = [result["object"] for result in tlc.results()]
                 return ret
         else:
             return []
