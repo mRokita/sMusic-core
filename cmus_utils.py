@@ -223,13 +223,12 @@ class MusicLibrary:
                 myquery = parser.parse(querystring)
                 try:
                     searcher.search_with_collector(myquery, tlc)
-                    print "a", tlc.results()
                     if len(tlc.results()) == 0:
                         myquery = parser.parse(" ".join(word+"~2" for word in querystring.split()))
                         searcher.search_with_collector(myquery, tlc)
                 except TimeLimit:
                     print "Time Limit for query reached!"
-                print "b", tlc.results()
+                print "czas zapytania: ", colector.runtime
                 ret = [result["object"] for result in tlc.results()]
                 return ret
         else:
