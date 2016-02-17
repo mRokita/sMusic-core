@@ -230,6 +230,7 @@ class MusicLibrary:
                     print "Time Limit for query reached!"
                 print "czas zapytania: ", colector.runtime
                 ret = [result["object"] for result in tlc.results()]
+                print "generated ret..."
                 return ret
         else:
             return []
