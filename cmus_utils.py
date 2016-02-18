@@ -165,9 +165,7 @@ class MusicLibrary:
                         album=TEXT(analyzer=analyzer, phrase=False), object=STORED)
         if not os.path.exists("index"):
             os.mkdir("index")
-            self.ix = create_in("index", schema)
-        else:
-            self.ix = open_dir("index")
+        self.ix = create_in("index", schema)
 
     def add_track_internal(self, track_info, writer):
 
@@ -194,8 +192,8 @@ class MusicLibrary:
             if track.id not in self.__tracks:
                 self.__tracks[track.id] = list()
             self.__tracks[track.id].append(track)
-            #writer.add_document(title=unicode(track.title), artist=unicode(track.artist.name),
-            #                    album=unicode(track.album.name), object=track)
+            writer.add_document(title=unicode(track.title), artist=unicode(track.artist.name),
+                                album=unicode(track.album.name), object=track)
 
     def add_track(self, track_info):
         writer = self.ix.writer()
@@ -438,14 +436,14 @@ def parse_current_library():
     writer = lib.ix.writer()
     for file in lib_files[:-1]:
         track_info = TrackInfo(file)
-        lib.add_track_internal(track_info, writer)
+        lib.add_track_internal(track_info,writer)
         sys.stdout.write("\rAnalizowanie biblioteki muzycznej... %d%%" % (i/lib_length*100))
         sys.stdout.flush()
         i += 1.0
     writer.commit()
     sys.stdout.write("\rOptymalizacja index-u...                            ")
     sys.stdout.flush()
-    #lib.ix.optimize()
+    lib.ix.optimize()
     return lib
 
 
