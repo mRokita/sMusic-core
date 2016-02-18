@@ -164,8 +164,6 @@ class MusicLibrary:
         analyzer = NgramWordAnalyzer(minsize=3)
         schema = Schema(title=TEXT(analyzer=analyzer, phrase=False), artist=TEXT(analyzer=analyzer, phrase=False),
                         album=TEXT(analyzer=analyzer, phrase=False), id=ID(stored=True))
-        #if not os.path.exists("index"):
-        #    os.mkdir("index")
         self.ram_storage = RamStorage()
         self.ram_storage.create()
         self.ix = self.ram_storage.create_index(schema)
@@ -220,7 +218,7 @@ class MusicLibrary:
         if len(querystring) >= 3:
             with self.ix.searcher() as searcher:
                 colector = searcher.collector(limit=20)
-                tlc = TimeLimitCollector(colector, timelimit=0.7, use_alarm=False)
+                tlc = TimeLimitCollector(colector, timelimit=1.4, use_alarm=False)
                 parser = MultifieldParser(["artist", "album", "title"], self.ix.schema)
                 parser.add_plugin(qparser.FuzzyTermPlugin())
                 myquery = parser.parse(querystring)
