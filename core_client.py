@@ -228,7 +228,6 @@ def handle_message(data, conn):
     if "msgid" in datacpy:
         del datacpy["msgid"]
     ret = target(**datacpy)
-    print "ret in handle_message"
     if "msgid" in data:
         ret["msgid"] = data["msgid"]
     print "RETURNING: %s" % ret
