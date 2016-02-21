@@ -13,11 +13,12 @@ import os.path
 
 from whoosh import qparser
 from whoosh.index import create_in, open_dir
-from whoosh.fields import Schema, STORED, TEXT, NGRAMWORDS
+from whoosh.fields import Schema, STORED, TEXT, NGRAMWORDS, ID
 from whoosh.query import *
 from whoosh.qparser import FuzzyTermPlugin, MultifieldParser
 from whoosh.analysis import NgramWordAnalyzer
 from whoosh.collectors import TimeLimitCollector, TimeLimit
+from whoosh.filedb.filestore import RamStorage
 
 TYPE_ARTIST = 1
 TYPE_ALBUM = 2
@@ -162,10 +163,10 @@ class MusicLibrary:
         self.__tracks = dict()
         analyzer = NgramWordAnalyzer(minsize=3)
         schema = Schema(title=TEXT(analyzer=analyzer, phrase=False), artist=TEXT(analyzer=analyzer, phrase=False),
-                        album=TEXT(analyzer=analyzer, phrase=False), object=STORED)
-        if not os.path.exists("index"):
-            os.mkdir("index")
-        self.ix = create_in("index", schema)
+                        album=TEXT(analyzer=analyzer, phrase=False), id=ID(stored=True))
+        self.ram_storage = RamStorage()
+        self.ram_storage.create()
+        self.ix = self.ram_storage.create_index(schema)
 
     def add_track_internal(self, track_info, writer):
 
@@ -193,7 +194,7 @@ class MusicLibrary:
                 self.__tracks[track.id] = list()
             self.__tracks[track.id].append(track)
             writer.add_document(title=unicode(track.title), artist=unicode(track.artist.name),
-                                album=unicode(track.album.name), object=track)
+                                album=unicode(track.album.name), id=unicode(track.id))
 
     def add_track(self, track_info):
         writer = self.ix.writer()
@@ -217,7 +218,7 @@ class MusicLibrary:
         if len(querystring) >= 3:
             with self.ix.searcher() as searcher:
                 colector = searcher.collector(limit=20)
-                tlc = TimeLimitCollector(colector, timelimit=0.7, use_alarm=False)
+                tlc = TimeLimitCollector(colector, timelimit=1.4, use_alarm=False)
                 parser = MultifieldParser(["artist", "album", "title"], self.ix.schema)
                 parser.add_plugin(qparser.FuzzyTermPlugin())
                 myquery = parser.parse(querystring)
@@ -229,7 +230,7 @@ class MusicLibrary:
                 except TimeLimit:
                     print "Time Limit for query reached!"
                 print "czas zapytania: ", colector.runtime
-                ret = [result["object"] for result in tlc.results()]
+                ret = [self.__tracks[result["id"]][0] for result in tlc.results()]
                 return ret
         else:
             return []
