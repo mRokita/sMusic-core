@@ -160,7 +160,7 @@ class MusicLibrary:
     def __init__(self):
         self.__artists = dict()
         self.__albums = dict()
-        self.__tracks = dict()
+        self.__tracks = list()
         analyzer = NgramWordAnalyzer(minsize=3)
         schema = Schema(title=TEXT(analyzer=analyzer, phrase=False), artist=TEXT(analyzer=analyzer, phrase=False),
                         album=TEXT(analyzer=analyzer, phrase=False), id=ID(stored=True))
@@ -190,11 +190,10 @@ class MusicLibrary:
 
         if track_id not in [track.id for track in self.get_artist(artist_id).get_album(album_id).get_tracks()]:
             track = Track(self, track_info)
-            if track.id not in self.__tracks:
-                self.__tracks[track.id] = list()
-            self.__tracks[track.id].append(track)
+            self.__tracks.append(track)
+            track_id = len(self.__tracks) - 1
             writer.add_document(title=unicode(track.title), artist=unicode(track.artist.name),
-                                album=unicode(track.album.name), id=unicode(track.id))
+                                album=unicode(track.album.name), id=unicode(track_id))
 
     def add_track(self, track_info):
         writer = self.ix.writer()
@@ -230,7 +229,7 @@ class MusicLibrary:
                 except TimeLimit:
                     print "Time Limit for query reached!"
                 print "czas zapytania: ", colector.runtime
-                ret = [self.__tracks[result["id"]][0] for result in tlc.results()]
+                ret = [self.__tracks[int(result["id"])] for result in tlc.results()]
                 return ret
         else:
             return []
