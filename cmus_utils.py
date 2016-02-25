@@ -245,10 +245,9 @@ class MusicLibrary:
             return None
 
     def get_track_by_filename(self, filename):
-        for track_group in self.__tracks.values():
-            for track in track_group:
-                if track.file == filename:
-                    return track
+        for track in self.__tracks:
+            if track.file == filename:
+                return track
 
     def get_album(self, album):
         """
