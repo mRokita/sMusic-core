@@ -3,10 +3,10 @@
 """
 Bardzo minimalny testowy klient TCP
 """
-import config
+from smusicclient import config
 import socket
 import ssl
-import cmus_utils
+from smusicclient import cmus_utils
 import re
 import sys
 import json
@@ -14,7 +14,7 @@ from base64 import b64encode, b64decode
 from inspect import getargspec
 from threading import Thread
 from functools import partial
-import gaps_controller as gaps
+from smusicclient import gaps_controller as gaps
 import time
 import logging
 import datetime
