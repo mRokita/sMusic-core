@@ -1,8 +1,13 @@
 import json
 import ConfigParser
+import os.path
 
 conf = ConfigParser.ConfigParser()
-conf.read("config.ini")
+config_paths = ["config.ini", "/etc/sMusic/client.ini"]
+for path in config_paths:
+    if os.path.isfile(path):
+        conf.read(path)
+        break
 
 ssl_validate_cert = conf.get("Server", "ssl_validate_cert")
 server_port = int(conf.get("Server", "port"))
