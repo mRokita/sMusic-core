@@ -3,7 +3,8 @@ import ConfigParser
 import os.path
 
 conf = ConfigParser.ConfigParser()
-config_paths = ["config.ini", "/etc/sMusic/client.ini"]
+config_paths = ["client.ini", "/etc/sMusic/client.ini", "/etc/sMusic/client.default.ini", "client.default.ini"]
+
 for path in config_paths:
     if os.path.isfile(path):
         conf.read(path)

@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 TimeoutStartSec=0
-ExecStart=/usr/bin/sMusic_client
+ExecStart=/usr/bin/sMusicClient
 Restart=always
 
 [Install]
