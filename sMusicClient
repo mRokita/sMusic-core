@@ -33,12 +33,12 @@ class InterruptionChecker:
         self.__was_interrupted = False
 
     def wait_for_interruption(self):
-            try:
-                while True:
-                    time.sleep(1)
-            except KeyboardInterrupt:
-                logging.debug("INTERRUPTION")
-                self.__was_interrupted = True
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logging.debug("INTERRUPTION")
+            self.__was_interrupted = True
 
     def was_interrupted(self):
         return self.__was_interrupted
@@ -55,7 +55,7 @@ EXCEPTIONS = {
 
 
 def escape(msg):
-    return b64encode(msg)+"\n"
+    return b64encode(msg) + "\n"
 
 
 def un_escape(msg):
@@ -66,7 +66,7 @@ def bind(function):
     argspec = getargspec(function)
     args = argspec[0]
     if argspec[-1]:
-        req_args = args[:len(argspec[-1])-1]
+        req_args = args[:len(argspec[-1]) - 1]
     else:
         req_args = args
     binds[function.__name__] = {
@@ -102,6 +102,7 @@ def play():
     cmus_utils.player_play()
     return {"request": "ok", "status": cmus_utils.get_player_status()}
 
+
 @bind
 def set_vol(value):
     cmus_utils.set_vol(value)
@@ -124,7 +125,8 @@ def play_prev():
 
 @bind
 def get_artists():
-    return {"request": "ok", "artists": [{"name": artist.name, "id": artist.id} for artist in sorted(library.get_artists().values(), key=lambda x: x.name)]}
+    return {"request": "ok", "artists": [{"name": artist.name, "id": artist.id} for artist in
+                                         sorted(library.get_artists().values(), key=lambda x: x.name)]}
 
 
 @bind
@@ -133,16 +135,16 @@ def get_albums(artist=None):
     if artist:
         lib_artist = library.get_artist(artist)
         albums = [{"name": album.name, "id": album.id} for album in sorted(lib_artist.get_albums(),
-                                                                            key=lambda x: (int(x.year), x.name))]
+                                                                           key=lambda x: (int(x.year), x.name))]
         return {"request": "ok", "albums": albums, "artist_name": lib_artist.name}
     else:
         albums = [{"name": album.name, "id": album.id} for album in sorted(library.get_albums().values(),
-                                                                            key=lambda x: (int(x.year), x.name))]
+                                                                           key=lambda x: (int(x.year), x.name))]
     return {"request": "ok", "albums": albums}
 
 
 @bind
-def add_to_queue(artist_id,album_id, track_id):
+def add_to_queue(artist_id, album_id, track_id):
     cmus_utils.add_to_queue_from_lib(library, artist_id, album_id, track_id)
     return {"request": "ok", "queue": cmus_utils.get_queue()}
 
@@ -192,7 +194,8 @@ def get_tracks(artist=None, album=None):
     if artist and not album:
         lib_artist = library.get_artist(artist)
         tracks = [{"title": track.title, "id": track.id} for track in sorted(lib_artist.get_tracks(),
-                                                                             key=lambda x: [int(x.tracknumber), x.file])]
+                                                                             key=lambda x: [int(x.tracknumber),
+                                                                                            x.file])]
         return {"request": "ok", "tracks": tracks, "artist_name": lib_artist.name}
     if artist and album:
         lib_artist = library.get_artist(artist)
@@ -287,16 +290,17 @@ if __name__ == "__main__":
     consoleHandler.setFormatter(logFormatter)
     rootLogger.addHandler(consoleHandler)
 
-    logging.info("\n+---------------------------------------------+\n|"+\
-                ("sMusic-core v{}".format(__version__).center(45, " "))+"|\n|"+\
-                ("https://github.com/mRokita/sMusic-core").center(45, " ")+\
-                "|\n+---------------------------------------------+\n")
+    logging.info("\n+---------------------------------------------+\n|" + \
+                 ("sMusic-core v{}".format(__version__).center(45, " ")) + "|\n|" + \
+                 ("https://github.com/mRokita/sMusic-core").center(45, " ") + \
+                 "|\n+---------------------------------------------+\n")
     try:
         subprocess.check_call(["pidof", "cmus"])
         logging.info("Cmus juz pracuje")
     except subprocess.CalledProcessError:
         logging.info("Startowanie cmus-a")
-        cmus_process = subprocess.Popen(["screen", "-A", "-m", "-d", "-S", "cmus", "cmus"], env=cmus_utils.cmus_remote_env)
+        cmus_process = subprocess.Popen(["screen", "-A", "-m", "-d", "-S", "cmus", "cmus"],
+                                        env=cmus_utils.cmus_remote_env)
         time.sleep(0.5)
         logging.info("Cmus wystartowany")
     library = cmus_utils.parse_current_library()
@@ -320,11 +324,18 @@ if __name__ == "__main__":
         logging.info("Rozłączono z serwerem!")
         if 'cmus_process' in locals():
             logging.info("Zamykanie cmus-a")
+            logging.debug("Delikatne zamykanie cmus-a")
+            cmus_utils.exec_cmus_command("quit")
+            time.sleep(0.5)
             # noinspection PyUnboundLocalVariable
-            cmus_process.terminate()
+            if cmus_process.poll() is None:
+                logging.debug("Terminate cmus")
+                cmus_process.terminate()
+                time.sleep(0.5)
+            if cmus_process.poll() is None:
+                logging.debug("Kill cmus")
+                cmus_process.kill()
             logging.info("Zamknieto cmus-a")
         else:
             logging.info("Cmus byl wlaczony z zewnatrz. Nie zamykam.")
         logging.warning("Zakońcono pracę klienta")
-
-
