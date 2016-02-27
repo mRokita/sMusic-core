@@ -28,8 +28,10 @@ PATTERN_STATUS = re.compile("(?:tag|set)? ?([abcdefghijklmnopqrstuvxyz_]+) (.+)"
 PATTERN_DATE = re.compile("\d\d\d\d")
 
 cmus_remote_env = os.environ.copy()
-# cmus_remote_env["HOME"] = "/root"
-# cmus_remote_env["USER"] = "root"
+if (not "HOME" in cmus_remote_env) or cmus_remote_env["HOME"] == str():
+    cmus_remote_env["HOME"] = "/root"
+if (not "USER" in cmus_remote_env) or cmus_remote_env["USER"] == str():
+    cmus_remote_env["USER"] = "root"
 
 
 class ModifiedPlayedTrack(Exception):
