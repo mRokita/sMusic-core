@@ -3,10 +3,10 @@
 """
 Bardzo minimalny testowy klient TCP
 """
-import config
+from smusicclient import config
 import socket
 import ssl
-import cmus_utils
+from smusicclient import cmus_utils
 import re
 import sys
 import json
@@ -14,8 +14,12 @@ from base64 import b64encode, b64decode
 from inspect import getargspec
 from threading import Thread
 from functools import partial
-import gaps_controller as gaps
+from smusicclient import gaps_controller as gaps
 import time
+import logging
+import datetime
+import os
+import subprocess
 
 __version__ = "0.1.1 Alpha"
 binds = {}
@@ -29,12 +33,12 @@ class InterruptionChecker:
         self.__was_interrupted = False
 
     def wait_for_interruption(self):
-            try:
-                while True:
-                    time.sleep(1)
-            except KeyboardInterrupt:
-                print "INTERRUPTION"
-                self.__was_interrupted = True
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logging.debug("INTERRUPTION")
+            self.__was_interrupted = True
 
     def was_interrupted(self):
         return self.__was_interrupted
@@ -51,7 +55,7 @@ EXCEPTIONS = {
 
 
 def escape(msg):
-    return b64encode(msg)+"\n"
+    return b64encode(msg) + "\n"
 
 
 def un_escape(msg):
@@ -62,7 +66,7 @@ def bind(function):
     argspec = getargspec(function)
     args = argspec[0]
     if argspec[-1]:
-        req_args = args[:len(argspec[-1])-1]
+        req_args = args[:len(argspec[-1]) - 1]
     else:
         req_args = args
     binds[function.__name__] = {
@@ -75,7 +79,7 @@ def bind(function):
 
 @bind
 def type():
-    print "\rWykonano handshake! Łączenie z serwerem zakończone."
+    logging.info("Wykonano handshake! Łączenie z serwerem zakończone.")
     return {"request": "ok", "type": "radio", "key": config.server_key, "version": __version__}
 
 
@@ -97,6 +101,7 @@ def status():
 def play():
     cmus_utils.player_play()
     return {"request": "ok", "status": cmus_utils.get_player_status()}
+
 
 @bind
 def set_vol(value):
@@ -120,7 +125,8 @@ def play_prev():
 
 @bind
 def get_artists():
-    return {"request": "ok", "artists": [{"name": artist.name, "id": artist.id} for artist in sorted(library.get_artists().values(), key=lambda x: x.name)]}
+    return {"request": "ok", "artists": [{"name": artist.name, "id": artist.id} for artist in
+                                         sorted(library.get_artists().values(), key=lambda x: x.name)]}
 
 
 @bind
@@ -129,16 +135,16 @@ def get_albums(artist=None):
     if artist:
         lib_artist = library.get_artist(artist)
         albums = [{"name": album.name, "id": album.id} for album in sorted(lib_artist.get_albums(),
-                                                                            key=lambda x: (int(x.year), x.name))]
+                                                                           key=lambda x: (int(x.year), x.name))]
         return {"request": "ok", "albums": albums, "artist_name": lib_artist.name}
     else:
         albums = [{"name": album.name, "id": album.id} for album in sorted(library.get_albums().values(),
-                                                                            key=lambda x: (int(x.year), x.name))]
+                                                                           key=lambda x: (int(x.year), x.name))]
     return {"request": "ok", "albums": albums}
 
 
 @bind
-def add_to_queue(artist_id,album_id, track_id):
+def add_to_queue(artist_id, album_id, track_id):
     cmus_utils.add_to_queue_from_lib(library, artist_id, album_id, track_id)
     return {"request": "ok", "queue": cmus_utils.get_queue()}
 
@@ -166,7 +172,7 @@ def get_current_queue():
     q = cmus_utils.get_queue()
     tracks = []
     for path in q:
-        print [path]
+        logging.debug([path])
         track = library.get_track_by_filename(path)
         tracks.append({
             "artist_id": track.artist.id,
@@ -188,7 +194,8 @@ def get_tracks(artist=None, album=None):
     if artist and not album:
         lib_artist = library.get_artist(artist)
         tracks = [{"title": track.title, "id": track.id} for track in sorted(lib_artist.get_tracks(),
-                                                                             key=lambda x: [int(x.tracknumber), x.file])]
+                                                                             key=lambda x: [int(x.tracknumber),
+                                                                                            x.file])]
         return {"request": "ok", "tracks": tracks, "artist_name": lib_artist.name}
     if artist and album:
         lib_artist = library.get_artist(artist)
@@ -205,7 +212,7 @@ def get_tracks(artist=None, album=None):
 @bind
 def error(type, comment, cat):
     conn.close()
-    print "FATAL ERROR {}".format(cat)
+    logging.error("FATAL ERROR {}".format(cat))
     raise EXCEPTIONS[type](comment)
 
 
@@ -230,7 +237,7 @@ def handle_message(data, conn):
     ret = target(**datacpy)
     if "msgid" in data:
         ret["msgid"] = data["msgid"]
-    print "RETURNING: %s" % ret
+    logging.debug("RETURNING: %s" % ret)
     conn.send(escape(json.dumps(ret)))
 
 
@@ -239,13 +246,13 @@ class ConnectionThread(Thread):
         Thread.__init__(self)
         self.daemon = True
         self.__was_stopped = False
-        sys.stdout.write("Łączenie z serwerem...")
+        logging.info("Łączenie z serwerem...")
         self.conn = conn
         self.conn.connect((config.server_host, config.server_port))
-        print "\rPołączono z serwerem!"
+        logging.info("Połączono z serwerem!")
 
     def run(self):
-        print "Oczekiwanie na handshake..."
+        logging.info("Oczekiwanie na handshake...")
         buff = ""
         msg = conn.read()
         while msg and not self.__was_stopped:
@@ -254,7 +261,7 @@ class ConnectionThread(Thread):
                 buff += parsed_msg[0][1]
                 esc_string = parsed_msg[0][0]
                 data = json.loads(un_escape(esc_string))
-                print "RECEIVED: %s" % data
+                logging.debug("RECEIVED: %s" % data)
                 if "request" in data:
                     Thread(target=partial(handle_message, data, conn)).start()
             else:
@@ -267,26 +274,68 @@ class ConnectionThread(Thread):
 
 
 if __name__ == "__main__":
-    print "+---------------------------------------------+\n|"+\
-          ("sMusic-core v{}".format(__version__).center(45, " "))+"|\n|"+\
-          ("https://github.com/mRokita/sMusic-core").center(45, " ")+\
-          "|\n+---------------------------------------------+\n"
+    if not os.path.exists(config.log_path):
+        os.makedirs(config.log_path)
+    log_file_name = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
+    rootLogger = logging.getLogger()
+    rootLogger.setLevel(logging.DEBUG)
+
+    fileHandler = logging.FileHandler("{0}/{1}.log".format(config.log_path, log_file_name))
+    fileHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(fileHandler)
+
+    consoleHandler = logging.StreamHandler()
+    consoleHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(consoleHandler)
+
+    logging.info("\n+---------------------------------------------+\n|" + \
+                 ("sMusic-core v{}".format(__version__).center(45, " ")) + "|\n|" + \
+                 ("https://github.com/mRokita/sMusic-core").center(45, " ") + \
+                 "|\n+---------------------------------------------+\n")
+    try:
+        subprocess.check_call(["pidof", "cmus"])
+        logging.info("Cmus juz pracuje")
+    except subprocess.CalledProcessError:
+        logging.info("Startowanie cmus-a")
+        cmus_process = subprocess.Popen(["screen", "-A", "-m", "-d", "-S", "cmus", "cmus"],
+                                        env=cmus_utils.cmus_remote_env)
+        time.sleep(0.5)
+        logging.info("Cmus wystartowany")
     library = cmus_utils.parse_current_library()
-    print "\rZakończono analizowanie biblioteki."
-    print "Ładowanie przerw..."
+    logging.info("Zakończono analizowanie biblioteki")
+    logging.info("Ładowanie przerw...")
     gaps.load_gaps()
     thread_gap = gaps.GapThread()
     thread_gap.start()
     thread_conn = ConnectionThread()
     thread_conn.start()
+    logging.warning("Klient sMusic gotowy")
     try:
         while True:
             time.sleep(100)
     except (KeyboardInterrupt, SystemExit):
-        print "\nZatrzymywanie kontroli przerw..."
+        logging.info("Zatrzymywanie kontroli przerw...")
         thread_gap.stop()
-        print "Zatrzymano kontrolę przerw!\nRozłączanie z serwerem..."
+        logging.info("Zatrzymano kontrolę przerw!")
+        logging.info("Rozłączanie z serwerem...")
         thread_conn.stop()
-        print "Rozłączono z serwerem!"
-
-
+        logging.info("Rozłączono z serwerem!")
+        if 'cmus_process' in locals():
+            logging.info("Zamykanie cmus-a")
+            logging.debug("Delikatne zamykanie cmus-a")
+            cmus_utils.exec_cmus_command("quit")
+            time.sleep(0.5)
+            # noinspection PyUnboundLocalVariable
+            if cmus_process.poll() is None:
+                logging.debug("Terminate cmus")
+                cmus_process.terminate()
+                time.sleep(0.5)
+            if cmus_process.poll() is None:
+                logging.debug("Kill cmus")
+                cmus_process.kill()
+            logging.info("Zamknieto cmus-a")
+        else:
+            logging.info("Cmus byl wlaczony z zewnatrz. Nie zamykam.")
+        logging.warning("Zakońcono pracę klienta")

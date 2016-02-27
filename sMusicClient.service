@@ -1,0 +1,11 @@
+[Unit]
+Description=Klient sMusic
+After=network.target
+
+[Service]
+TimeoutStartSec=0
+ExecStart=/usr/bin/sMusicClient
+Restart=always
+
+[Install]
+WantedBy=default.target

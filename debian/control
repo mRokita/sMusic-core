@@ -1,0 +1,12 @@
+Source: smusicclient
+Maintainer: Artur Puzio <cytadela88@gmail.com>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 9)
+X-Python-Version: >=2.5
+
+Package: smusicclient
+Architecture: all
+Depends: ${misc:Depends}, python, python-whoosh
+Description: Client for sMusic

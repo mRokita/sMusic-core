@@ -1,5 +1,7 @@
 ### My ignores
 index/
+logs/
+client.ini
 
 ### Python template
 # Byte-compiled / optimized / DLL files
@@ -40,7 +42,6 @@ pip-delete-this-directory.txt
 
 # Unit test / coverage reports
 htmlcov/
-config.py
 .tox/
 .coverage
 .coverage.*
