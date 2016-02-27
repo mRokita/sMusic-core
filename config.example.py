@@ -21,3 +21,6 @@ gaps = [["7:45", "8:15"],
 
 # Opóźnienie dzwonka w stosunku do zegara systemoweg, w milisekundach
 clock_correction = 0
+
+# Ścieżka do przechowywania logów
+log_path = "logs"

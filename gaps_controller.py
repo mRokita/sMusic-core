@@ -5,6 +5,7 @@ import time
 import cmus_utils
 import config
 from threading import Thread
+import logging
 
 gap_list = []
 
@@ -36,8 +37,8 @@ def is_unlocked():
 def load_gaps():
     for el in config.gaps:
         gap_list.append(Gap(datetime.strptime(el[0], "%H:%M").time(), datetime.strptime(el[1],"%H:%M").time()))
-        print "Załadowano przerwę od {} do {}".format(
-            gap_list[gap_list.count(0)-1].beginning, gap_list[gap_list.count(0)-1].ending)
+        logging.info("Załadowano przerwę od {} do {}".format(
+            gap_list[gap_list.count(0)-1].beginning, gap_list[gap_list.count(0)-1].ending))
 
 
 class GapThread(Thread):
@@ -52,11 +53,11 @@ class GapThread(Thread):
             unlocked = is_unlocked()
             if unlocked and last_state != STATE_UNLOCKED:
                 last_state = STATE_UNLOCKED
-                print "Odblokowano odtwarzacz"
+                logging.debug("Odblokowano odtwarzacz")
             elif not unlocked and last_state != STATE_LOCKED:
                 cmus_utils.player_pause()
                 last_state = STATE_LOCKED
-                print "Zablokowano odtwarzacz"
+                logging.debug("Zablokowano odtwarzacz")
             time.sleep(1)
 
     def stop(self):

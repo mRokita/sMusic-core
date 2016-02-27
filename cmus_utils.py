@@ -8,8 +8,8 @@ import os
 import re
 from copy import deepcopy
 from mutagen import File
-import sys
 import os.path
+import logging
 
 from whoosh import qparser
 from whoosh.index import create_in, open_dir
@@ -227,8 +227,8 @@ class MusicLibrary:
                         myquery = parser.parse(" ".join(word+"~2" for word in querystring.split()))
                         searcher.search_with_collector(myquery, tlc)
                 except TimeLimit:
-                    print "Time Limit for query reached!"
-                print "czas zapytania: ", colector.runtime
+                    logging.info("Time Limit for query reached!")
+                logging.debug("czas zapytania: ", colector.runtime)
                 ret = [self.__tracks[int(result["id"])] for result in tlc.results()]
                 return ret
         else:
@@ -432,15 +432,17 @@ def parse_current_library():
     lib_length = len(lib_files)
     i = 0
     writer = lib.ix.writer()
+    previous_procent_done_str = ""
     for file in lib_files[:-1]:
         track_info = TrackInfo(file)
-        lib.add_track_internal(track_info,writer)
-        sys.stdout.write("\rAnalizowanie biblioteki muzycznej... %d%%" % (i/lib_length*100))
-        sys.stdout.flush()
+        lib.add_track_internal(track_info, writer)
+        current_percent_done_str = "%d%%" % (i/lib_length*100)
+        if current_percent_done_str != previous_procent_done_str:
+            logging.debug("Analizowanie biblioteki muzycznej... " + current_percent_done_str)
+            previous_procent_done_str = current_percent_done_str
         i += 1.0
     writer.commit()
-    sys.stdout.write("\rOptymalizacja index-u...                            ")
-    sys.stdout.flush()
+    logging.debug("Optymalizacja index-u...")
     lib.ix.optimize()
     return lib
 

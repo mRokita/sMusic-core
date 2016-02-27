@@ -16,6 +16,9 @@ from threading import Thread
 from functools import partial
 import gaps_controller as gaps
 import time
+import logging
+import datetime
+import os
 
 __version__ = "0.1.1 Alpha"
 binds = {}
@@ -33,7 +36,7 @@ class InterruptionChecker:
                 while True:
                     time.sleep(1)
             except KeyboardInterrupt:
-                print "INTERRUPTION"
+                logging.debug("INTERRUPTION")
                 self.__was_interrupted = True
 
     def was_interrupted(self):
@@ -75,7 +78,7 @@ def bind(function):
 
 @bind
 def type():
-    print "\rWykonano handshake! Łączenie z serwerem zakończone."
+    logging.info("Wykonano handshake! Łączenie z serwerem zakończone.")
     return {"request": "ok", "type": "radio", "key": config.server_key, "version": __version__}
 
 
@@ -166,7 +169,7 @@ def get_current_queue():
     q = cmus_utils.get_queue()
     tracks = []
     for path in q:
-        print [path]
+        logging.debug([path])
         track = library.get_track_by_filename(path)
         tracks.append({
             "artist_id": track.artist.id,
@@ -205,7 +208,7 @@ def get_tracks(artist=None, album=None):
 @bind
 def error(type, comment, cat):
     conn.close()
-    print "FATAL ERROR {}".format(cat)
+    logging.error("FATAL ERROR {}".format(cat))
     raise EXCEPTIONS[type](comment)
 
 
@@ -230,7 +233,7 @@ def handle_message(data, conn):
     ret = target(**datacpy)
     if "msgid" in data:
         ret["msgid"] = data["msgid"]
-    print "RETURNING: %s" % ret
+    logging.debug("RETURNING: %s" % ret)
     conn.send(escape(json.dumps(ret)))
 
 
@@ -239,13 +242,13 @@ class ConnectionThread(Thread):
         Thread.__init__(self)
         self.daemon = True
         self.__was_stopped = False
-        sys.stdout.write("Łączenie z serwerem...")
+        logging.info("Łączenie z serwerem...")
         self.conn = conn
         self.conn.connect((config.server_host, config.server_port))
-        print "\rPołączono z serwerem!"
+        logging.info("Połączono z serwerem!")
 
     def run(self):
-        print "Oczekiwanie na handshake..."
+        logging.info("Oczekiwanie na handshake...")
         buff = ""
         msg = conn.read()
         while msg and not self.__was_stopped:
@@ -254,7 +257,7 @@ class ConnectionThread(Thread):
                 buff += parsed_msg[0][1]
                 esc_string = parsed_msg[0][0]
                 data = json.loads(un_escape(esc_string))
-                print "RECEIVED: %s" % data
+                logging.debug("RECEIVED: %s" % data)
                 if "request" in data:
                     Thread(target=partial(handle_message, data, conn)).start()
             else:
@@ -267,26 +270,45 @@ class ConnectionThread(Thread):
 
 
 if __name__ == "__main__":
-    print "+---------------------------------------------+\n|"+\
-          ("sMusic-core v{}".format(__version__).center(45, " "))+"|\n|"+\
-          ("https://github.com/mRokita/sMusic-core").center(45, " ")+\
-          "|\n+---------------------------------------------+\n"
+    if not os.path.exists(config.log_path):
+        os.makedirs(config.log_path)
+    log_file_name = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
+    rootLogger = logging.getLogger()
+    rootLogger.setLevel(logging.DEBUG)
+
+    fileHandler = logging.FileHandler("{0}/{1}.log".format(config.log_path, log_file_name))
+    fileHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(fileHandler)
+
+    consoleHandler = logging.StreamHandler()
+    consoleHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(consoleHandler)
+
+    logging.info("\n+---------------------------------------------+\n|"+\
+                ("sMusic-core v{}".format(__version__).center(45, " "))+"|\n|"+\
+                ("https://github.com/mRokita/sMusic-core").center(45, " ")+\
+                "|\n+---------------------------------------------+\n")
     library = cmus_utils.parse_current_library()
-    print "\rZakończono analizowanie biblioteki."
-    print "Ładowanie przerw..."
+    logging.info("Zakończono analizowanie biblioteki")
+    logging.info("Ładowanie przerw...")
     gaps.load_gaps()
     thread_gap = gaps.GapThread()
     thread_gap.start()
     thread_conn = ConnectionThread()
     thread_conn.start()
+    logging.warning("Klient sMusic gotowy")
     try:
         while True:
             time.sleep(100)
     except (KeyboardInterrupt, SystemExit):
-        print "\nZatrzymywanie kontroli przerw..."
+        logging.info("Zatrzymywanie kontroli przerw...")
         thread_gap.stop()
-        print "Zatrzymano kontrolę przerw!\nRozłączanie z serwerem..."
+        logging.info("Zatrzymano kontrolę przerw!")
+        logging.info("Rozłączanie z serwerem...")
         thread_conn.stop()
-        print "Rozłączono z serwerem!"
+        logging.info("Rozłączono z serwerem!")
+        logging.warning("Zakońcono pracę klienta")
 
 
