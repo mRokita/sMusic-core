@@ -19,6 +19,7 @@ import time
 import logging
 import datetime
 import os
+import subprocess
 
 __version__ = "0.1.1 Alpha"
 binds = {}
@@ -290,6 +291,14 @@ if __name__ == "__main__":
                 ("sMusic-core v{}".format(__version__).center(45, " "))+"|\n|"+\
                 ("https://github.com/mRokita/sMusic-core").center(45, " ")+\
                 "|\n+---------------------------------------------+\n")
+    try:
+        subprocess.check_call(["pidof", "cmus"])
+        logging.info("Cmus juz pracuje")
+    except subprocess.CalledProcessError:
+        logging.info("Startowanie cmus-a")
+        cmus_process = subprocess.Popen(["cmus"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        time.sleep(0.5)
+        logging.info("Cmus wystartowany")
     library = cmus_utils.parse_current_library()
     logging.info("Zakończono analizowanie biblioteki")
     logging.info("Ładowanie przerw...")
@@ -309,6 +318,13 @@ if __name__ == "__main__":
         logging.info("Rozłączanie z serwerem...")
         thread_conn.stop()
         logging.info("Rozłączono z serwerem!")
+        if 'cmus_process' in locals():
+            logging.info("Zamykanie cmus-a")
+            # noinspection PyUnboundLocalVariable
+            cmus_process.terminate()
+            logging.info("Zamknieto cmus-a")
+        else:
+            logging.info("Cmus byl wlaczony z zewnatrz. Nie zamykam.")
         logging.warning("Zakońcono pracę klienta")
 
 
