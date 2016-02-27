@@ -4,7 +4,7 @@
 from distutils.core import setup
 
 setup(name="sMusicClient",
-      version="0.2",
+      version="0.1.2",
       description="Klient sMusic",
       url="https://github.com/mRokita/sMusic-core/",
       author="Michał Rokita & Artur Puzio",
