@@ -27,6 +27,10 @@ TYPE_TRACK = 3
 PATTERN_STATUS = re.compile("(?:tag|set)? ?([abcdefghijklmnopqrstuvxyz_]+) (.+)", re.DOTALL)
 PATTERN_DATE = re.compile("\d\d\d\d")
 
+cmus_remote_env = os.environ.copy()
+# cmus_remote_env["HOME"] = "/root"
+# cmus_remote_env["USER"] = "root"
+
 
 class ModifiedPlayedTrack(Exception):
     def __init__(self, msg):
@@ -270,7 +274,7 @@ class MusicLibrary:
 
 
 def exec_cmus_command(command):
-    return check_output(["cmus-remote", "-C", command])
+    return check_output(["cmus-remote", "-C", command], env=cmus_remote_env)
 
 
 def get_player_status():
@@ -309,7 +313,7 @@ def get_player_status():
             "position": "108"
         }
     """
-    output = check_output(["cmus-remote", "-Q"]).split("\n")
+    output = check_output(["cmus-remote", "-Q"], env=cmus_remote_env).split("\n")
     status = dict()
     for line in output:
         match = PATTERN_STATUS.findall(line)

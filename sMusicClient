@@ -296,7 +296,7 @@ if __name__ == "__main__":
         logging.info("Cmus juz pracuje")
     except subprocess.CalledProcessError:
         logging.info("Startowanie cmus-a")
-        cmus_process = subprocess.Popen(["cmus"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        cmus_process = subprocess.Popen(["screen", "-A", "-m", "-d", "-S", "cmus", "cmus"], env=cmus_utils.cmus_remote_env) # , stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         time.sleep(0.5)
         logging.info("Cmus wystartowany")
     library = cmus_utils.parse_current_library()
