@@ -34,7 +34,7 @@ class Binder:
             @wraps(function)
             def decorated(*args, **kwargs):
                 if self.gaps.is_unlocked():
-                    return f(*args, **kwargs)
+                    return function(*args, **kwargs)
                 else:
                     return {"request": "error", "type": "locked", "comment": "Sterowanie zablokowane", "cat": "=^..^="}
             return decorated
