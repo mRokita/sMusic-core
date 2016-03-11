@@ -14,4 +14,4 @@ setup(name="sMusicClient",
       requires=["whoosh"],
       data_files=[('/etc/sMusic', ['client.default.ini']),
                   ('/usr/lib/systemd/system', ['sMusicClient.service'])]
-     )
+      )
