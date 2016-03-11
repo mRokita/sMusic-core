@@ -63,12 +63,3 @@ class GapThread(Thread):
     def stop(self):
         self.__was_stopped = True
 
-
-def requires_unlocked(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if is_unlocked():
-            return f(*args, **kwargs)
-        else:
-            return {"request": "error", "type": "locked", "comment": "Sterowanie zablokowane", "cat": "=^..^="}
-    return decorated

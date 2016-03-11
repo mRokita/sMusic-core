@@ -2,8 +2,6 @@ import logging
 import os
 import config
 import datetime
-
-
 def setup_logging():
     if not os.path.exists(config.log_path):
         os.makedirs(config.log_path)
