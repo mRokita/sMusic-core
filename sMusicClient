@@ -7,12 +7,6 @@ from smusicclient import config
 import socket
 import ssl
 from smusicclient import cmus_utils
-import re
-import json
-from base64 import b64encode, b64decode
-from inspect import getargspec
-from threading import Thread
-from functools import partial
 from smusicclient import gaps_controller as gaps
 from smusicclient import logs
 from smusicclient.protocol_functions import binder
@@ -24,12 +18,9 @@ binds = {}
 was_interrupted = False
 conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
 
-if __name__ == "__main__":
-    logs.setup_logging()
-    logs.print_info("\n+---------------------------------------------+\n|" +
-                 ("sMusic-core v{}".format(__version__).center(45, " ")) + "|\n|" +
-                 "https://github.com/mRokita/sMusic-core".center(45, " ") +
-                 "|\n+---------------------------------------------+\n")
+
+def start_cmus():
+    global cmus_process
     try:
         subprocess.check_call(["pidof", "cmus"])
         logs.print_info("Cmus juz pracuje")
@@ -39,17 +30,55 @@ if __name__ == "__main__":
                                         env=cmus_utils.cmus_remote_env)
         time.sleep(0.5)
         logs.print_info("Cmus wystartowany")
-    library = cmus_utils.get_musiclibrary()
-    logs.print_info("Zakończono analizowanie biblioteki")
-    logs.print_info("Ładowanie przerw...")
-    gaps.load_gaps()
-    thread_gap = gaps.GapThread()
-    thread_gap.start()
+
+
+def start_connection():
+    global thread_conn
     binder.set_gaps_controller(gaps)
     binder.set_library(library)
     binder.set_connection(conn)
     thread_conn = ConnectionThread(conn, binder)
     thread_conn.start()
+
+
+def init_gaps():
+    global thread_gap
+    gaps.load_gaps()
+    thread_gap = gaps.GapThread()
+    thread_gap.start()
+
+
+def kill_cmus():
+    if 'cmus_process' in locals():
+        logs.print_info("Zamykanie cmus-a")
+        logs.print_debug("Delikatne zamykanie cmus-a")
+        cmus_utils.exec_cmus_command("quit")
+        time.sleep(0.5)
+        # noinspection PyUnboundLocalVariable
+        if cmus_process.poll() is None:
+            logs.print_debug("Terminate cmus")
+            cmus_process.terminate()
+            time.sleep(0.5)
+        if cmus_process.poll() is None:
+            logs.print_debug("Kill cmus")
+            cmus_process.kill()
+        logs.print_info("Zamknieto cmus-a")
+    else:
+        logs.print_info("Cmus był włączony z zewnątrz. Nie zamykam.")
+
+
+if __name__ == "__main__":
+    logs.setup_logging()
+    logs.print_info("\n+---------------------------------------------+\n|" +
+                 ("sMusic-core v{}".format(__version__).center(45, " ")) + "|\n|" +
+                 "https://github.com/mRokita/sMusic-core".center(45, " ") +
+                 "|\n+---------------------------------------------+\n")
+    start_cmus()
+    init_gaps()
+    library = cmus_utils.get_musiclibrary()
+    logs.print_info("Zakończono analizowanie biblioteki")
+    logs.print_info("Ładowanie przerw...")
+    start_connection()
     logs.print_warning("Klient sMusic gotowy")
     try:
         while True:
@@ -61,20 +90,5 @@ if __name__ == "__main__":
         logs.print_info("Rozłączanie z serwerem...")
         thread_conn.stop()
         logs.print_info("Rozłączono z serwerem!")
-        if 'cmus_process' in locals():
-            logs.print_info("Zamykanie cmus-a")
-            logs.print_debug("Delikatne zamykanie cmus-a")
-            cmus_utils.exec_cmus_command("quit")
-            time.sleep(0.5)
-            # noinspection PyUnboundLocalVariable
-            if cmus_process.poll() is None:
-                logs.print_debug("Terminate cmus")
-                cmus_process.terminate()
-                time.sleep(0.5)
-            if cmus_process.poll() is None:
-                logs.print_debug("Kill cmus")
-                cmus_process.kill()
-            logs.print_info("Zamknieto cmus-a")
-        else:
-            logs.print_info("Cmus byl wlaczony z zewnatrz. Nie zamykam.")
-        logs.print_warning("Zakońcono pracę klienta")
+        kill_cmus()
+        logs.print_warning("Zakończono pracę klienta")
