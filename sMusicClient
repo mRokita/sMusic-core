@@ -8,17 +8,14 @@ import socket
 import ssl
 from smusicclient import cmus_utils
 import re
-import sys
 import json
 from base64 import b64encode, b64decode
 from inspect import getargspec
 from threading import Thread
 from functools import partial
 from smusicclient import gaps_controller as gaps
+from smusicclient import logs
 import time
-import logging
-import datetime
-import os
 import subprocess
 
 __version__ = "0.1.1 Alpha"
@@ -37,7 +34,7 @@ class InterruptionChecker:
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
-            logging.debug("INTERRUPTION")
+            logs.print_debug("INTERRUPTION")
             self.__was_interrupted = True
 
     def was_interrupted(self):
@@ -79,7 +76,7 @@ def bind(function):
 
 @bind
 def type():
-    logging.info("Wykonano handshake! Łączenie z serwerem zakończone.")
+    logs.print_info("Wykonano handshake! Łączenie z serwerem zakończone.")
     return {"request": "ok", "type": "radio", "key": config.server_key, "version": __version__}
 
 
@@ -172,7 +169,7 @@ def get_current_queue():
     q = cmus_utils.get_queue()
     tracks = []
     for path in q:
-        logging.debug([path])
+        logs.print_debug([path])
         track = library.get_track_by_filename(path)
         tracks.append({
             "artist_id": track.artist.id,
@@ -212,7 +209,7 @@ def get_tracks(artist=None, album=None):
 @bind
 def error(type, comment, cat):
     conn.close()
-    logging.error("FATAL ERROR {}".format(cat))
+    logs.print_error("FATAL ERROR {}".format(cat))
     raise EXCEPTIONS[type](comment)
 
 
@@ -237,7 +234,7 @@ def handle_message(data, conn):
     ret = target(**datacpy)
     if "msgid" in data:
         ret["msgid"] = data["msgid"]
-    logging.debug("RETURNING: %s" % ret)
+    logs.print_debug("RETURNING: %s" % ret)
     conn.send(escape(json.dumps(ret)))
 
 
@@ -246,13 +243,13 @@ class ConnectionThread(Thread):
         Thread.__init__(self)
         self.daemon = True
         self.__was_stopped = False
-        logging.info("Łączenie z serwerem...")
+        logs.print_info("Łączenie z serwerem...")
         self.conn = conn
         self.conn.connect((config.server_host, config.server_port))
-        logging.info("Połączono z serwerem!")
+        logs.print_info("Połączono z serwerem!")
 
     def run(self):
-        logging.info("Oczekiwanie na handshake...")
+        logs.print_info("Oczekiwanie na handshake...")
         buff = ""
         msg = conn.read()
         while msg and not self.__was_stopped:
@@ -261,7 +258,7 @@ class ConnectionThread(Thread):
                 buff += parsed_msg[0][1]
                 esc_string = parsed_msg[0][0]
                 data = json.loads(un_escape(esc_string))
-                logging.debug("RECEIVED: %s" % data)
+                logs.print_debug("RECEIVED: %s" % data)
                 if "request" in data:
                     Thread(target=partial(handle_message, data, conn)).start()
             else:
@@ -274,68 +271,53 @@ class ConnectionThread(Thread):
 
 
 if __name__ == "__main__":
-    if not os.path.exists(config.log_path):
-        os.makedirs(config.log_path)
-    log_file_name = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-    logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
-    rootLogger = logging.getLogger()
-    rootLogger.setLevel(logging.DEBUG)
-
-    fileHandler = logging.FileHandler("{0}/{1}.log".format(config.log_path, log_file_name))
-    fileHandler.setFormatter(logFormatter)
-    rootLogger.addHandler(fileHandler)
-
-    consoleHandler = logging.StreamHandler()
-    consoleHandler.setFormatter(logFormatter)
-    rootLogger.addHandler(consoleHandler)
-
-    logging.info("\n+---------------------------------------------+\n|" + \
-                 ("sMusic-core v{}".format(__version__).center(45, " ")) + "|\n|" + \
-                 ("https://github.com/mRokita/sMusic-core").center(45, " ") + \
+    logs.setup_logging()
+    logs.print_info("\n+---------------------------------------------+\n|" +
+                 ("sMusic-core v{}".format(__version__).center(45, " ")) + "|\n|" +
+                 "https://github.com/mRokita/sMusic-core".center(45, " ") +
                  "|\n+---------------------------------------------+\n")
     try:
         subprocess.check_call(["pidof", "cmus"])
-        logging.info("Cmus juz pracuje")
+        logs.print_info("Cmus juz pracuje")
     except subprocess.CalledProcessError:
-        logging.info("Startowanie cmus-a")
+        logs.print_info("Startowanie cmus-a")
         cmus_process = subprocess.Popen(["screen", "-A", "-m", "-d", "-S", "cmus", "cmus"],
                                         env=cmus_utils.cmus_remote_env)
         time.sleep(0.5)
-        logging.info("Cmus wystartowany")
+        logs.print_info("Cmus wystartowany")
     library = cmus_utils.get_musiclibrary()
-    logging.info("Zakończono analizowanie biblioteki")
-    logging.info("Ładowanie przerw...")
+    logs.print_info("Zakończono analizowanie biblioteki")
+    logs.print_info("Ładowanie przerw...")
     gaps.load_gaps()
     thread_gap = gaps.GapThread()
     thread_gap.start()
     thread_conn = ConnectionThread()
     thread_conn.start()
-    logging.warning("Klient sMusic gotowy")
+    logs.print_warning("Klient sMusic gotowy")
     try:
         while True:
             time.sleep(100)
     except (KeyboardInterrupt, SystemExit):
-        logging.info("Zatrzymywanie kontroli przerw...")
+        logs.print_info("Zatrzymywanie kontroli przerw...")
         thread_gap.stop()
-        logging.info("Zatrzymano kontrolę przerw!")
-        logging.info("Rozłączanie z serwerem...")
+        logs.print_info("Zatrzymano kontrolę przerw!")
+        logs.print_info("Rozłączanie z serwerem...")
         thread_conn.stop()
-        logging.info("Rozłączono z serwerem!")
+        logs.print_info("Rozłączono z serwerem!")
         if 'cmus_process' in locals():
-            logging.info("Zamykanie cmus-a")
-            logging.debug("Delikatne zamykanie cmus-a")
+            logs.print_info("Zamykanie cmus-a")
+            logs.print_debug("Delikatne zamykanie cmus-a")
             cmus_utils.exec_cmus_command("quit")
             time.sleep(0.5)
             # noinspection PyUnboundLocalVariable
             if cmus_process.poll() is None:
-                logging.debug("Terminate cmus")
+                logs.print_debug("Terminate cmus")
                 cmus_process.terminate()
                 time.sleep(0.5)
             if cmus_process.poll() is None:
-                logging.debug("Kill cmus")
+                logs.print_debug("Kill cmus")
                 cmus_process.kill()
-            logging.info("Zamknieto cmus-a")
+            logs.print_info("Zamknieto cmus-a")
         else:
-            logging.info("Cmus byl wlaczony z zewnatrz. Nie zamykam.")
-        logging.warning("Zakońcono pracę klienta")
+            logs.print_info("Cmus byl wlaczony z zewnatrz. Nie zamykam.")
+        logs.print_warning("Zakońcono pracę klienta")
