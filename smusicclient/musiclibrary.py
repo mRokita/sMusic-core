@@ -12,6 +12,7 @@ from mutagen import File
 
 PATTERN_DATE = re.compile("\d\d\d\d")
 
+
 def id_from_tag(tag):
     tag = tag.lower()
     id = str()
