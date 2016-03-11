@@ -303,7 +303,7 @@ if __name__ == "__main__":
                                         env=cmus_utils.cmus_remote_env)
         time.sleep(0.5)
         logging.info("Cmus wystartowany")
-    library = cmus_utils.parse_current_library()
+    library = cmus_utils.get_musiclibrary()
     logging.info("Zakończono analizowanie biblioteki")
     logging.info("Ładowanie przerw...")
     gaps.load_gaps()
