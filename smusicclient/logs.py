@@ -7,7 +7,7 @@ import datetime
 def setup_logging():
     if not os.path.exists(config.log_path):
         os.makedirs(config.log_path)
-    log_file_name = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_file_name = datetime.datetime.now().strftime("client_%Y-%m-%d_%H-%M-%S")
 
     log_formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
     root_logger = logging.getLogger()
