@@ -2,11 +2,14 @@
 # -*- coding: utf-8 -*-
 
 from distutils.core import setup
+from smusicclient import __version__
 
 setup(name="sMusicClient",
-      version="0.1.2",
+      version=__version__,
       description="Klient sMusic",
       url="https://github.com/mRokita/sMusic-core/",
+      download_url="https://github.com/mRokita/sMusic-core/tarball/0.1.3",
+      keywords=["smusic", "core", "staszic", "music"],
       author="Michał Rokita & Artur Puzio",
       author_email="mrokita@mrokita.pl & cytadela88@gmail.com",
       packages=["smusicclient"],
