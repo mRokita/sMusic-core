@@ -16,9 +16,9 @@ TYPE_TRACK = 3
 PATTERN_STATUS = re.compile("(?:tag|set)? ?([abcdefghijklmnopqrstuvxyz_]+) (.+)", re.DOTALL)
 
 cmus_remote_env = os.environ.copy()
-if (not "HOME" in cmus_remote_env) or cmus_remote_env["HOME"] == str():
+if ("HOME" not in cmus_remote_env) or cmus_remote_env["HOME"] == str():
     cmus_remote_env["HOME"] = "/root"
-if (not "USER" in cmus_remote_env) or cmus_remote_env["USER"] == str():
+if ("USER" not in cmus_remote_env) or cmus_remote_env["USER"] == str():
     cmus_remote_env["USER"] = "root"
 
 
@@ -42,7 +42,7 @@ def get_player_status():
             "genre": "General Alternative Rock",
             "replaygain": "disabled",
             "albumartist": "Artur Rojek",
-            "file": "/muzyka/Artur Rojek - Składam się z ciągłych powtórzeń [2014] [FLAC]/02 - Artur Rojek - Beksa.flac",
+            "file": "/muzyka/Artur Rojek - Składam się z ciągłych powtórzeń [2014][FLAC]/02 - Artur Rojek - Beksa.flac",
             "duration": "241",
             "tracknumber": "2",
             "aaa_mode": "album",
@@ -188,4 +188,4 @@ def update_queue(q):
     for i in range(played_tracks_cnt):
             if q[i] != cached_queue[i]:
                 raise ModifiedPlayedTrack("{0}th track in queue has been modified".format(i))
-    set_queue(q, played_tracks_cnt)
+    set_queue(q)

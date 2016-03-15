@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from threading import Thread
 import logs
-import cmus_utils
-import gaps_controller as gaps
 import json
 import re
 from inspect import getargspec
@@ -108,4 +106,3 @@ def escape(msg):
 
 def un_escape(msg):
     return b64decode(msg)
-

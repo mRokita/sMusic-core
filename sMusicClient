@@ -70,9 +70,9 @@ def kill_cmus():
 if __name__ == "__main__":
     logs.setup_logging()
     logs.print_info("\n+---------------------------------------------+\n|" +
-                 ("sMusic-core v{}".format(__version__).center(45, " ")) + "|\n|" +
-                 "https://github.com/mRokita/sMusic-core".center(45, " ") +
-                 "|\n+---------------------------------------------+\n")
+                    ("sMusic-core v{}".format(__version__).center(45, " ")) + "|\n|" +
+                    "https://github.com/mRokita/sMusic-core".center(45, " ") +
+                    "|\n+---------------------------------------------+\n")
     start_cmus()
     init_gaps()
     library = cmus_utils.get_musiclibrary()

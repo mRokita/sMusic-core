@@ -15,7 +15,7 @@ for path in config_paths:
 
 if not found_config:
     print "ERROR! NO CONFIG FILE FOUND!!!"
-    print "checked locations: " + config_paths
+    print "checked locations: " + ' '.join(config_paths)
 
 ssl_validate_cert = conf.get("Server", "ssl_validate_cert")
 server_port = int(conf.get("Server", "port"))

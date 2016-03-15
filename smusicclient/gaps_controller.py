@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from functools import wraps
 from datetime import datetime, timedelta
 import time
 import cmus_utils
@@ -36,7 +35,7 @@ def is_unlocked():
 
 def load_gaps():
     for el in config.gaps:
-        gap_list.append(Gap(datetime.strptime(el[0], "%H:%M").time(), datetime.strptime(el[1],"%H:%M").time()))
+        gap_list.append(Gap(datetime.strptime(el[0], "%H:%M").time(), datetime.strptime(el[1], "%H:%M").time()))
         logging.info("Załadowano przerwę od {} do {}".format(
             gap_list[gap_list.count(0)-1].beginning, gap_list[gap_list.count(0)-1].ending))
 
@@ -62,4 +61,3 @@ class GapThread(Thread):
 
     def stop(self):
         self.__was_stopped = True
-

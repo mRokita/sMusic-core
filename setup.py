@@ -14,7 +14,7 @@ setup(name="sMusicClient",
       author_email="mrokita@mrokita.pl & cytadela88@gmail.com",
       packages=["smusicclient"],
       scripts=["sMusicClient"],
-      requires=["whoosh"],
+      requires=["whoosh", "mutagen"],
       data_files=[('/etc/sMusic', ['client.default.ini']),
                   ('/usr/lib/systemd/system', ['sMusicClient.service'])]
       )

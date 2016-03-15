@@ -15,11 +15,11 @@ PATTERN_DATE = re.compile("\d\d\d\d")
 
 def id_from_tag(tag):
     tag = tag.lower()
-    id = str()
+    my_id = str()
     for char in tag:
         if char in "abcdefghijklmnopqrstuvwxyz1234567890":
-            id += char
-    return id
+            my_id += char
+    return my_id
 
 
 def parse_library(lib_files):
@@ -32,8 +32,8 @@ def parse_library(lib_files):
     i = 0
     writer = lib.ix.writer()
     previous_procent_done_str = ""
-    for file in lib_files[:-1]:
-        track_info = TrackInfo(file)
+    for f in lib_files[:-1]:
+        track_info = TrackInfo(f)
         lib.add_track_internal(track_info, writer)
         current_percent_done_str = "%d%%" % (i/lib_length*100)
         if current_percent_done_str != previous_procent_done_str:
@@ -75,7 +75,7 @@ class TrackInfo:
         f = File(path, easy=True)
         try:
             self.length = f.info.length
-        except Exception:
+        except AttributeError:
             self.length = None
         self.path = path
         self.tag = Tag(f)
