@@ -229,13 +229,47 @@ def search_for_track(query):
             }
 
 
+@bind
+def get_download_status():
+    down_status = thread_download.get_status()
+    return {"request": "ok",
+            "progress": down_status["progress"],
+            "speed": down_status["speed"],
+            "queue_len": down_status["queue_len"]}
+
+
+@bind
+def get_download_queue():
+    queue = thread_download.get_queue()
+    return {"request": "ok",
+            "queue": [str(el) for el in queue]}
+
+
+@bind
+def remove_from_download_queue(index):
+    thread_download.remove_from_download_queue(index)
+    return {"request": "ok"}
+
+
+@bind
+def add_to_download_queue(uri, artist, album, title):
+    thread_download.add_download(uri, artist, album, title)
+    return {"request": "ok"}
+
+
 def handle_message(data, conn):
-    target = binds[data["request"]]["target"]
-    datacpy = dict(data)
-    del datacpy["request"]
-    if "msgid" in datacpy:
-        del datacpy["msgid"]
-    ret = target(**datacpy)
+    try:
+        target = binds[data["request"]]["target"]
+        datacpy = dict(data)
+        del datacpy["request"]
+        if "msgid" in datacpy:
+            del datacpy["msgid"]
+        ret = target(**datacpy)
+    except Exception as e:
+        ret={"request": "error",
+             "cat": "=^..^=",
+             "type": "fatal",
+             "comment": "exception while remove_from_download_queue: %s" % e}
     if "msgid" in data:
         ret["msgid"] = data["msgid"]
     logging.debug("RETURNING: %s" % ret)
@@ -312,6 +346,7 @@ if __name__ == "__main__":
     thread_gap.start()
     thread_conn = ConnectionThread()
     thread_conn.start()
+    global thread_download
     thread_download = download_controller.DownloadQueueThread()
     thread_download.start()
     logging.warning("Klient sMusic gotowy")

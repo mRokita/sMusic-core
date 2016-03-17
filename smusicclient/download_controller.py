@@ -8,12 +8,15 @@ import cmus_utils
 
 
 class DownloadObject:
-    def __init__(self, uri, artist=None, album=None, track=None):
+    def __init__(self, uri, artist="", album="", track=""):
         self.uri = uri
         self.artist = artist
         self.album = album
         self.track = track
         pass
+
+    def __str__(self):
+        return "%s: %s: %s" % (self.artist, self.album, self.track)
 
 
 class DownloadQueueThread(Thread):
@@ -27,13 +30,17 @@ class DownloadQueueThread(Thread):
         while not self.__was_stopped:
             time.sleep(1)
 
-    def add_download(self, uri):
-        pass
+    def add_download(self, uri, artist="", album="", track=""):
+        self.queue.append(DownloadObject(uri, artist, album, track))
+        # TODO: if not downloading: start downloading
 
     def get_status(self):
         return {"progress": 10,  # postep w procentach
                 "speed": 100000,  # predkosc w bps
                 "queue_len": len(self.queue)}
+
+    def get_queue(self):
+        return self.queue
 
     def remove_current_from_download(self):
         pass
