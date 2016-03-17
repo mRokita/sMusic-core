@@ -48,11 +48,6 @@ def init_gaps():
     thread_gap = gaps.GapThread()
     thread_gap.start()
 
-def init_download_controler():
-    global thread_download
-    thread_download = download_controller.DownloadQueueThread()
-    thread_download.start()
-
 
 def kill_cmus():
     if 'cmus_process' in locals():
@@ -81,6 +76,7 @@ if __name__ == "__main__":
                  "|\n+---------------------------------------------+\n")
     start_cmus()
     init_gaps()
+    download_controller.init()
     library = cmus_utils.get_musiclibrary()
     logs.print_info("Zakończono analizowanie biblioteki")
     logs.print_info("Ładowanie przerw...")

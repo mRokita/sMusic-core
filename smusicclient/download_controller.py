@@ -53,3 +53,9 @@ class DownloadQueueThread(Thread):
 
     def stop(self):
         self.__was_stopped = True
+
+
+def init():
+    global thread
+    thread = DownloadQueueThread()
+    thread.start()
