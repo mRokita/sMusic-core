@@ -15,6 +15,7 @@ from inspect import getargspec
 from threading import Thread
 from functools import partial
 from smusicclient import gaps_controller as gaps
+from smusicclient import download_controller
 import time
 import logging
 import datetime
@@ -311,6 +312,8 @@ if __name__ == "__main__":
     thread_gap.start()
     thread_conn = ConnectionThread()
     thread_conn.start()
+    thread_download = download_controller.DownloadQueueThread()
+    thread_download.start()
     logging.warning("Klient sMusic gotowy")
     try:
         while True:
