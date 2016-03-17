@@ -8,6 +8,7 @@ import socket
 import ssl
 from smusicclient import cmus_utils
 from smusicclient import gaps_controller as gaps
+from smusicclient import download_controller
 from smusicclient import logs
 from smusicclient.protocol_functions import binder
 from smusicclient.protocol_utils import ConnectionThread
@@ -46,6 +47,11 @@ def init_gaps():
     gaps.load_gaps()
     thread_gap = gaps.GapThread()
     thread_gap.start()
+
+def init_download_controler():
+    global thread_download
+    thread_download = download_controller.DownloadQueueThread()
+    thread_download.start()
 
 
 def kill_cmus():
