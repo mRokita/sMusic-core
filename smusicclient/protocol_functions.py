@@ -153,6 +153,13 @@ def add_download(url, artist="", album="", track=""):
 
 
 @binder.bind()
+def download_status():
+    ret = download_controller.thread.get_status()
+    ret["request"] = "ok"
+    return ret
+
+
+@binder.bind()
 def get_download_queue():
     queue = []
     for item in download_controller.thread.get_queue():
