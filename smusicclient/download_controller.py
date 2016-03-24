@@ -3,14 +3,16 @@ from __future__ import unicode_literals, division
 from threading import Thread
 import time
 import youtube_dl
+from string import join
+import os
 import config
 import cmus_utils
 import logs
 
 
 class DownloadObject:
-    def __init__(self, uri, artist="", album="", track=""):
-        self.uri = uri
+    def __init__(self, url, artist="", album="", track=""):
+        self.url = url
         self.artist = artist
         self.album = album
         self.track = track
@@ -20,7 +22,7 @@ class DownloadObject:
         return "%s: %s: %s" % (self.artist, self.album, self.track)
 
 
-class YoutubeDownloadThread(Thread):
+class YoutubeDLDownloadThread(Thread):
     def __init__(self, url):
         Thread.__init__(self)
         self.daemon = True
@@ -31,6 +33,7 @@ class YoutubeDownloadThread(Thread):
         self.__speed = 0  # in bytes per second
         self.__progress = 0  # float in range 0 to 1
         self.__eta = 0  # in seconds
+        self.__filename = "not_ready.mp3"
 
     def progress_hook(self, data):
         if data[u"status"] == u"downloading":
@@ -38,8 +41,10 @@ class YoutubeDownloadThread(Thread):
             self.__progress = (data[u'downloaded_bytes'] / data[u'total_bytes']) * 0.99
             self.__eta = data[u'eta']+10
         elif data[u"status"] == u"finished":
+            logs.print_debug(data)
             self.__progress = 0.99
             self.__eta = 10
+            self.__filename = join(data[u'filename'].split('.')[:-1] + ["mp3"], '.')
         elif data[u"status"] == u"error":
             self.success = False
             self.ended = True
@@ -49,6 +54,7 @@ class YoutubeDownloadThread(Thread):
             ydl_opts = {'quiet': True,
                         'progress_hooks': [self.progress_hook],
                         'format': 'bestaudio/best',
+                        'outtmpl': '%(title)s.%(ext)s',
                         'postprocessors': [{
                             'key': 'FFmpegExtractAudio',
                             'preferredcodec': 'mp3',
@@ -76,6 +82,9 @@ class YoutubeDownloadThread(Thread):
     def eta(self):
         return self.__eta
 
+    def downloaded_path(self):
+        return self.__filename
+
     def stop(self):
         self.__was_stopped = True
 
@@ -91,10 +100,13 @@ class DownloadQueueThread(Thread):
 
     def start_download(self):
         if self.downloader is None:
-            method = self.queue[0].uri.split(';')[0]
-            url = self.queue[0].uri.split(';')[1]
+            try:
+                method = self.queue[0].url.split(';')[0]
+                url = self.queue[0].url.split(';')[1]
+            except IndexError as e:
+                logs.print_error("Syntax error in URL: %s" % e)
             if method == "youtube-dl":
-                self.downloader = YoutubeDownloadThread(url)
+                self.downloader = YoutubeDLDownloadThread(url)
                 logs.print_debug("Starting download of %s with youtube-dl" % url)
             else:
                 logs.print_error("Unknown download method %s" % method)
@@ -105,14 +117,28 @@ class DownloadQueueThread(Thread):
     def run(self):
         while not self.__was_stopped:
             if self.downloader is not None and self.downloader.ended:
+                if self.queue[0].artist == "":
+                    self.queue[0].artist = "Unknown"
+                if self.queue[0].album == "":
+                    self.queue[0].album = "Unknown"
+                if self.queue[0].track == "":
+                    self.queue[0].track = self.downloader.downloaded_path().split("/")[-1].split(".")[0]
+                target_dir = join([config.download_path,
+                                   self.queue[0].artist,
+                                   self.queue[0].album], "/")
+                if not os.path.exists(target_dir):
+                    os.makedirs(target_dir)
+                file_path = target_dir+"/" + self.queue[0].track + self.downloader.downloaded_path().split(".")[-1]
+                os.rename(self.downloader.downloaded_path(), file_path)
+                cmus_utils.add_to_library(file_path)
                 del self.queue[0]
                 self.downloader = None
                 if len(self.queue) > 0:
                     self.start_download()
             time.sleep(1)
 
-    def add_download(self, uri, artist="", album="", track=""):
-        self.queue.append(DownloadObject(uri, artist, album, track))
+    def add_download(self, url, artist="", album="", track=""):
+        self.queue.append(DownloadObject(url, artist, album, track))
         logs.print_debug("added new url to download")
         if self.downloader is None:
             self.start_download()

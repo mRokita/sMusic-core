@@ -173,7 +173,9 @@ def get_current_library():
 
 def get_musiclibrary():
     lib_files = get_current_library()
-    return parse_library(lib_files)
+    global lib
+    lib = parse_library(lib_files)
+    return lib
 
 
 def update_queue(q):
@@ -189,3 +191,9 @@ def update_queue(q):
             if q[i] != cached_queue[i]:
                 raise ModifiedPlayedTrack("{0}th track in queue has been modified".format(i))
     set_queue(q, played_tracks_cnt)
+
+
+def add_to_library(path):
+    exec_cmus_command("add " + path)
+    track_info = TrackInfo(path)
+    lib.add_track(track_info)
