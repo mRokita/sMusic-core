@@ -8,6 +8,7 @@ import os
 import config
 import cmus_utils
 import logs
+from mutagen import File
 
 
 class DownloadObject:
@@ -110,6 +111,7 @@ class DownloadQueueThread(Thread):
                 logs.print_debug("Starting download of %s with youtube-dl" % url)
             else:
                 logs.print_error("Unknown download method %s" % method)
+                return
             self.downloader.start()
         else:
             logs.print_warning("Download thread already exists")
@@ -128,8 +130,13 @@ class DownloadQueueThread(Thread):
                                    self.queue[0].album], "/")
                 if not os.path.exists(target_dir):
                     os.makedirs(target_dir)
-                file_path = target_dir+"/" + self.queue[0].track + self.downloader.downloaded_path().split(".")[-1]
+                file_path = target_dir+ "/" + self.queue[0].track + "." + self.downloader.downloaded_path().split(".")[-1]
                 os.rename(self.downloader.downloaded_path(), file_path)
+                f = File(file_path, easy=True)
+                f["artist"] = self.queue[0].artist
+                f["album"] = self.queue[0].album
+                f["title"] = self.queue[0].track
+                f.save()
                 cmus_utils.add_to_library(file_path)
                 del self.queue[0]
                 self.downloader = None
