@@ -122,14 +122,10 @@ class DownloadQueueThread(Thread):
             return {"status": "downloading",
                     "progress": self.downloader.progress(),  # postep w procentach
                     "speed": self.downloader.speed(),  # predkosc w bps
-                    "eta": self.downloader.eta(),
+                    "eta": self.downloader.eta(),  # pozostaly czas w sekundach
                     "queue_len": len(self.queue)}
         else:
-            return {"status": "idle",
-                    "progress": 0,
-                    "speed": 0,
-                    "eta": 0,
-                    "queue_len": len(self.queue)}
+            return {"status": "idle"}
 
     def get_queue(self):
         return self.queue
