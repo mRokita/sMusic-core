@@ -153,6 +153,20 @@ def add_download(url, artist="", album="", track=""):
 
 
 @binder.bind()
+def get_download_queue():
+    queue = []
+    for item in download_controller.thread.get_queue():
+        queue.append({"url": item.url, "artist": item.artist, "album": item.album, "track": item.track})
+    return {"request": "ok", "queue": queue}
+
+
+@binder.bind()
+def clear_download_queue():
+    download_controller.thread.clear_queue()
+    return {"request": "ok"}
+
+
+@binder.bind()
 def error(type, comment, cat):
     logs.print_error("FATAL ERROR {}".format(cat))
     raise EXCEPTIONS[type](comment)

@@ -172,6 +172,10 @@ class DownloadQueueThread(Thread):
         else:
             del self.queue[num]
 
+    def clear_queue(self):
+        del self.queue[1:]
+        self.remove_current_from_download()
+
     def stop(self):
         self.__was_stopped = True
         if self.downloader is not None:
