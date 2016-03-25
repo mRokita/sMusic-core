@@ -8,6 +8,7 @@ from mutagen import File
 import random
 import string
 import os
+import shutil
 import re
 import config
 import cmus_utils
@@ -38,6 +39,7 @@ class YoutubeDLDownloadThread(Thread):
         self.__progress = 0  # float in range 0 to 1
         self.__eta = 0  # in seconds
         self.__filename = "not_ready.mp3"
+        self.__tmpfilename = ""
 
     def progress_hook(self, data):
         if data[u"status"] == u"downloading":
@@ -48,7 +50,7 @@ class YoutubeDLDownloadThread(Thread):
             logs.print_debug(data)
             self.__progress = 0.99
             self.__eta = 10
-            self.__filename = join(data[u'filename'].split('.')[:-1] + ["mp3"], '.')
+            self.__tmpfilename = data[u'filename']
         elif data[u"status"] == u"error":
             self.success = False
             self.ended = True
@@ -58,16 +60,19 @@ class YoutubeDLDownloadThread(Thread):
             ydl_opts = {'quiet': True,
                         'progress_hooks': [self.progress_hook],
                         'format': 'bestaudio/best',
-                        'outtmpl': '%(title)s.%(ext)s',
+                        'outtmpl': '/tmp/smusic/%(title)s.%(ext)s',
+                        'noplaylist': True,
                         'postprocessors': [{
                             'key': 'FFmpegExtractAudio',
-                            'preferredcodec': 'mp3',
-                            'preferredquality': '192',
                         }],
                         }
 
             with youtube_dl.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([self.url])
+                for i in os.listdir("/tmp/smusic"):
+                    if os.path.isfile(os.path.join("/tmp/smusic", i)) and \
+                                      i.startswith(join(self.__tmpfilename.split('.')[:-1], '.').split('/')[-1]):
+                        self.__filename = "/tmp/smusic/" + i
                 self.success = True
                 self.__eta = 0
                 self.__progress = 1
@@ -130,24 +135,42 @@ class DownloadQueueThread(Thread):
     def run(self):
         while not self.__was_stopped:
             if self.downloader is not None and self.downloader.ended:
-                if self.queue[0].artist == "":
-                    self.queue[0].artist = "Unknown"
-                if self.queue[0].album == "":
-                    self.queue[0].album = "Unknown"
-                if self.queue[0].track == "":
-                    self.queue[0].track = self.downloader.downloaded_path().split("/")[-1].split(".")[0]
+                f = File(self.downloader.downloaded_path(), easy=True)
+                if not re.search('[a-zA-Z0-9]', self.queue[0].artist):
+                    if re.search('[a-zA-Z0-9]', f.get("artist", "")):
+                        self.queue[0].artist = f["artist"]
+                    else:
+                        self.queue[0].artist = "Unknown"
+                        f["artist"] = self.queue[0].artist
+                else:
+                    f["artist"] = self.queue[0].artist
+                if not re.search('[a-zA-Z0-9]', self.queue[0].album):
+                    if re.search('[a-zA-Z0-9]', f.get("album", "")):
+                        self.queue[0].album = f["album"]
+                    else:
+                        self.queue[0].album = "Unknown"
+                        f["album"] = self.queue[0].album
+                else:
+                    f["album"] = self.queue[0].album
+                if not re.search('[a-zA-Z0-9]', self.queue[0].track):
+                    if re.search('[a-zA-Z0-9]', f.get("title", "")):
+                        self.queue[0].track = f["title"]
+                    else:
+                        self.queue[0].track = join(self.downloader.downloaded_path().split("/")[-1].split(".")[0:-1], '.')
+                        f["title"] = self.queue[0].track
+                else:
+                    f["title"] = self.queue[0].track
+                print f.tags
+                f.save()
+
                 target_dir = join([config.download_path,
                                    safe_filename(self.queue[0].artist),
                                    safe_filename(self.queue[0].album)], "/")
                 if not os.path.exists(target_dir):
                     os.makedirs(target_dir)
                 file_path = target_dir + "/" + safe_filename(self.queue[0].track) + "_" + random_string() + "." + self.downloader.downloaded_path().split(".")[-1]
-                os.rename(self.downloader.downloaded_path(), file_path)
-                f = File(file_path, easy=True)
-                f["artist"] = self.queue[0].artist
-                f["album"] = self.queue[0].album
-                f["title"] = self.queue[0].track
-                f.save()
+                shutil.move(self.downloader.downloaded_path(), file_path)
+
                 cmus_utils.add_to_library(file_path)
                 del self.queue[0]
                 self.downloader = None
