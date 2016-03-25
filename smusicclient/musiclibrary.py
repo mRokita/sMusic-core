@@ -261,6 +261,7 @@ class MusicLibrary:
         for track in self.__tracks:
             if track.file == filename:
                 return track
+        logging.error("file %s not found in library" % filename)
 
     def get_album(self, album):
         """
