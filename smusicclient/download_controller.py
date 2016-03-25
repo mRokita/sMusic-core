@@ -4,11 +4,14 @@ from threading import Thread
 import time
 import youtube_dl
 from string import join
+from mutagen import File
+import random
+import string
 import os
+import re
 import config
 import cmus_utils
 import logs
-from mutagen import File
 
 
 class DownloadObject:
@@ -90,6 +93,14 @@ class YoutubeDLDownloadThread(Thread):
         self.__was_stopped = True
 
 
+def safe_filename(name):
+    return "".join([c for c in name if re.match(r'\w', c)])
+
+
+def random_string(size=6, chars=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for _ in range(size))
+
+
 class DownloadQueueThread(Thread):
     queue = []
 
@@ -126,11 +137,11 @@ class DownloadQueueThread(Thread):
                 if self.queue[0].track == "":
                     self.queue[0].track = self.downloader.downloaded_path().split("/")[-1].split(".")[0]
                 target_dir = join([config.download_path,
-                                   self.queue[0].artist,
-                                   self.queue[0].album], "/")
+                                   safe_filename(self.queue[0].artist),
+                                   safe_filename(self.queue[0].album)], "/")
                 if not os.path.exists(target_dir):
                     os.makedirs(target_dir)
-                file_path = target_dir+ "/" + self.queue[0].track + "." + self.downloader.downloaded_path().split(".")[-1]
+                file_path = target_dir + "/" + safe_filename(self.queue[0].track) + "_" + random_string() + "." + self.downloader.downloaded_path().split(".")[-1]
                 os.rename(self.downloader.downloaded_path(), file_path)
                 f = File(file_path, easy=True)
                 f["artist"] = self.queue[0].artist
