@@ -83,6 +83,14 @@ def add_to_queue(artist_id, album_id, track_id):
 
 
 @binder.bind()
+def set_queue(new_queue):
+    cmus_utils.clear_queue()
+    for track in new_queue:
+        cmus_utils.add_to_queue_from_lib(binder.lib, track.artist_id, track.album_id, track.track_id)
+    return {"request": "ok", "queue": cmus_utils.get_queue()}
+
+
+@binder.bind()
 def clear_queue():
     cmus_utils.clear_queue()
     return {"request": "ok"}
