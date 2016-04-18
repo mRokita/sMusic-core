@@ -120,15 +120,16 @@ class DownloadQueueThread(Thread):
             try:
                 method = self.queue[0].url.split(';')[0]
                 url = self.queue[0].url.split(';')[1]
+                if method == "youtube-dl":
+                    self.downloader = YoutubeDLDownloadThread(url)
+                    logs.print_debug("Starting download of %s with youtube-dl" % url)
+                else:
+                    logs.print_error("Unknown download method %s" % method)
+                    return
+                self.downloader.start()
             except IndexError as e:
                 logs.print_error("Syntax error in URL: %s" % e)
-            if method == "youtube-dl":
-                self.downloader = YoutubeDLDownloadThread(url)
-                logs.print_debug("Starting download of %s with youtube-dl" % url)
-            else:
-                logs.print_error("Unknown download method %s" % method)
-                return
-            self.downloader.start()
+
         else:
             logs.print_warning("Download thread already exists")
 
