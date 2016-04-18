@@ -213,7 +213,7 @@ class DownloadQueueThread(Thread):
 
     def stop(self):
         self.__was_stopped = True
-        if self.downloader is not None:
+        if self.downloader:
             self.downloader.stop()
 
 
