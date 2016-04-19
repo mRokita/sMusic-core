@@ -8,6 +8,7 @@ import socket
 import ssl
 from smusicclient import cmus_utils
 from smusicclient import gaps_controller as gaps
+from smusicclient import download_controller
 from smusicclient import logs
 from smusicclient.protocol_functions import binder
 from smusicclient.protocol_utils import ConnectionThread
@@ -75,6 +76,7 @@ if __name__ == "__main__":
                     "|\n+---------------------------------------------+\n")
     start_cmus()
     init_gaps()
+    download_controller.init()
     library = cmus_utils.get_musiclibrary()
     logs.print_info("Zakończono analizowanie biblioteki")
     logs.print_info("Ładowanie przerw...")

@@ -5,6 +5,7 @@ import cmus_utils
 from exceptions import EXCEPTIONS
 import config
 from __init__ import __version__
+import download_controller
 
 binder = Binder()
 
@@ -148,6 +149,36 @@ def get_tracks(artist=None, album=None):
         tracks = [{"title": track.title, "id": track.id} for track in sorted(binder.lib.get_tracks().values(),
                                                                              key=lambda x: [x.tracknumber, x.file])]
     return {"request": "ok", "tracks": tracks}
+
+
+@binder.bind()
+def add_download(url, artist="", album="", track=""):
+    try:
+        download_controller.thread.add_download(url, artist, album, track)
+        return {"request": "ok"}
+    except Exception as e:
+        return {"request": "error", "cat": "=^..^=", "comment": "exception while trying to download: %s" % e}
+
+
+@binder.bind()
+def download_status():
+    ret = download_controller.thread.get_status()
+    ret["request"] = "ok"
+    return ret
+
+
+@binder.bind()
+def get_download_queue():
+    queue = []
+    for item in download_controller.thread.get_queue():
+        queue.append({"url": item.url, "artist": item.artist, "album": item.album, "track": item.track})
+    return {"request": "ok", "queue": queue}
+
+
+@binder.bind()
+def clear_download_queue():
+    download_controller.thread.clear_queue()
+    return {"request": "ok"}
 
 
 @binder.bind()
