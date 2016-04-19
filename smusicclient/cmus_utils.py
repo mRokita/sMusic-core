@@ -84,7 +84,7 @@ def is_playing():
 
 
 def player_pause():
-    if get_player_status()["status"] != "paused":
+    if is_playing():
         exec_cmus_command("player-pause")
 
 
