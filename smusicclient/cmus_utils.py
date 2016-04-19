@@ -190,10 +190,7 @@ def update_queue(q):
     for i in range(played_tracks_cnt):
             if q[i] != cached_queue[i]:
                 raise ModifiedPlayedTrack("{0}th track in queue has been modified".format(i))
-<<<<<<< HEAD
     set_queue(q)
-=======
-    set_queue(q, played_tracks_cnt)
 
 
 def add_to_library(path):
