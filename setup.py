@@ -13,12 +13,8 @@ setup(name="sMusicClient",
       author="Michał Rokita & Artur Puzio",
       author_email="mrokita@mrokita.pl & cytadela88@gmail.com",
       packages=["smusicclient"],
-      scripts=["sMusicClient"],
-<<<<<<< HEAD
-      requires=["whoosh", "mutagen"],
-=======
+      scripts=["sMusicClient"]
       requires=["whoosh", 'youtube_dl', 'mutagen'],
->>>>>>> download
       data_files=[('/etc/sMusic', ['client.default.ini']),
                   ('/usr/lib/systemd/system', ['sMusicClient.service'])]
       )
