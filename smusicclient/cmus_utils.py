@@ -197,4 +197,3 @@ def add_to_library(path):
     exec_cmus_command("add " + path)
     track_info = TrackInfo(path)
     lib.add_track(track_info)
->>>>>>> download
