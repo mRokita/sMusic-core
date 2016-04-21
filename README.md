@@ -15,4 +15,5 @@ sudo python setup.py install
 vim /etc/sMusic/client.ini #Edycja configu, dokumentacja na ten temat pojawi się w przyszłości
 systemctl start sMusicClient
 ```
-
+### Zrzuty ekranu
+![screenshot](https://sc-cdn.scaleengine.net/i/6c6986f03056276509f08d369866f22f.png)
