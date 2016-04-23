@@ -87,7 +87,7 @@ class Player:
         self.__queue = queue.__reversed__()
 
     def __load(self, track):
-        self.stop()
+        self.kill_stream()
         self.track = track
         self.__stream = Stream(self.track.file, self.next_track)
 
