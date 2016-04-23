@@ -124,8 +124,9 @@ class Player:
         return self.__stream and self.__stream.is_playing()
 
     def get_json_status(self):
-        data = {"vol_left": self.get_volume()[0],
-                "vol_right": self.get_volume()[1],
+        vol = self.get_volume()
+        data = {"vol_left": vol[0],
+                "vol_right": vol[0] if len(vol) == 1 else vol[1],
                 "status": "playing" if self.is_playing() else "paused"}
         if self.track:
                 data["file"] = self.track.file
