@@ -33,7 +33,7 @@ def start_connection():
 def init_gaps():
     global thread_gap
     gaps.load_gaps()
-    thread_gap = gaps.GapThread(player)
+    thread_gap = gaps.GapThread(p)
     thread_gap.start()
 
 if __name__ == "__main__":
