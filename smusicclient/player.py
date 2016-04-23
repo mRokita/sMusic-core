@@ -5,8 +5,9 @@ from pyaudio import PyAudio
 from threading import Thread
 import musiclibrary
 from alsaaudio import Mixer
-
+import config
 mixer = Mixer()
+
 
 class Stream(Thread):
     def __init__(self, f, on_terminated):
@@ -167,7 +168,7 @@ class Player:
         self.seek(0)
 
 def get_musiclibrary():
-    lib_files = musiclibrary.get_file_list("/muzyka/explory")
+    lib_files = musiclibrary.get_file_list(config.library_path)
     global lib
     lib = musiclibrary.parse_library(lib_files)
     return lib
