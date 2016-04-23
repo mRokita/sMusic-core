@@ -6,7 +6,7 @@ from threading import Thread
 import musiclibrary
 from alsaaudio import Mixer
 import config
-mixer = Mixer()
+mixer = Mixer(cardindex=config.cardindex)
 
 
 class Stream(Thread):
