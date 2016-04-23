@@ -63,7 +63,7 @@ class Stream(Thread):
 
         stream.stop_stream()
         self.__pyaudio.terminate()
-        if self.__position < len(self.__chunks) and self.__active:
+        if self.__active:
             self.on_terminated()
 
 
