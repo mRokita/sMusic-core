@@ -36,6 +36,12 @@ def play():
 
 
 @binder.bind()
+def seek(position):
+    binder.player.seek(int(position))
+    return {"request": "ok"}
+
+
+@binder.bind()
 @binder.requires_unlocked()
 def set_vol(value):
     binder.player.set_volume(int(value))
