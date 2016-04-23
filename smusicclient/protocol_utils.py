@@ -17,6 +17,8 @@ class Binder:
         self.gaps = None
         self.conn = None
         self.lib = None
+        self.player = None
+        """:type : smusicclient.player.Player"""
 
     def set_gaps_controller(self, ctl):
         self.gaps = ctl
@@ -26,6 +28,9 @@ class Binder:
 
     def set_library(self, lib):
         self.lib = lib
+
+    def set_player(self, player):
+        self.player = player
 
     def requires_unlocked(self):
         def wrapped(function):

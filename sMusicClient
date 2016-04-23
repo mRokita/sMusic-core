@@ -6,12 +6,12 @@ Bardzo minimalny testowy klient TCP
 from smusicclient import config
 import socket
 import ssl
-from smusicclient import cmus_utils
 from smusicclient import gaps_controller as gaps
 from smusicclient import download_controller
 from smusicclient import logs
 from smusicclient.protocol_functions import binder
 from smusicclient.protocol_utils import ConnectionThread
+from smusicclient import player
 import time
 import subprocess
 from smusicclient import __version__
@@ -20,24 +20,12 @@ was_interrupted = False
 conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
 
 
-def start_cmus():
-    global cmus_process
-    try:
-        subprocess.check_call(["pidof", "cmus"])
-        logs.print_info("Cmus juz pracuje")
-    except subprocess.CalledProcessError:
-        logs.print_info("Startowanie cmus-a")
-        cmus_process = subprocess.Popen(["screen", "-A", "-m", "-d", "-S", "cmus", "cmus"],
-                                        env=cmus_utils.cmus_remote_env)
-        time.sleep(0.5)
-        logs.print_info("Cmus wystartowany")
-
-
 def start_connection():
     global thread_conn
     binder.set_gaps_controller(gaps)
     binder.set_library(library)
     binder.set_connection(conn)
+    binder.set_player(p)
     thread_conn = ConnectionThread(conn, binder)
     thread_conn.start()
 
@@ -45,28 +33,8 @@ def start_connection():
 def init_gaps():
     global thread_gap
     gaps.load_gaps()
-    thread_gap = gaps.GapThread()
+    thread_gap = gaps.GapThread(player)
     thread_gap.start()
-
-
-def kill_cmus():
-    if 'cmus_process' in locals():
-        logs.print_info("Zamykanie cmus-a")
-        logs.print_debug("Delikatne zamykanie cmus-a")
-        cmus_utils.exec_cmus_command("quit")
-        time.sleep(0.5)
-        # noinspection PyUnboundLocalVariable
-        if cmus_process.poll() is None:
-            logs.print_debug("Terminate cmus")
-            cmus_process.terminate()
-            time.sleep(0.5)
-        if cmus_process.poll() is None:
-            logs.print_debug("Kill cmus")
-            cmus_process.kill()
-        logs.print_info("Zamknieto cmus-a")
-    else:
-        logs.print_info("Cmus był włączony z zewnątrz. Nie zamykam.")
-
 
 if __name__ == "__main__":
     logs.setup_logging()
@@ -74,10 +42,10 @@ if __name__ == "__main__":
                     ("sMusic-core v{}".format(__version__).center(45, " ")) + "|\n|" +
                     "https://github.com/mRokita/sMusic-core".center(45, " ") +
                     "|\n+---------------------------------------------+\n")
-    start_cmus()
+    p = player.Player()
     init_gaps()
     download_controller.init()
-    library = cmus_utils.get_musiclibrary()
+    library = player.get_musiclibrary()
     logs.print_info("Zakończono analizowanie biblioteki")
     logs.print_info("Ładowanie przerw...")
     start_connection()
@@ -92,5 +60,4 @@ if __name__ == "__main__":
         logs.print_info("Rozłączanie z serwerem...")
         thread_conn.stop()
         logs.print_info("Rozłączono z serwerem!")
-        kill_cmus()
         logs.print_warning("Zakończono pracę klienta")

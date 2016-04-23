@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
 import time
-import cmus_utils
 import config
 from threading import Thread
 import logging
@@ -41,8 +40,9 @@ def load_gaps():
 
 
 class GapThread(Thread):
-    def __init__(self):
+    def __init__(self, player):
         Thread.__init__(self)
+        self.player = player
         self.daemon = True
         self.__was_stopped = False
 
@@ -54,7 +54,7 @@ class GapThread(Thread):
                 last_state = STATE_UNLOCKED
                 logging.debug("Odblokowano odtwarzacz")
             elif not unlocked and last_state != STATE_LOCKED:
-                cmus_utils.player_pause()
+                self.player.pause()
                 last_state = STATE_LOCKED
                 logging.debug("Zablokowano odtwarzacz")
             time.sleep(1)

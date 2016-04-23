@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from protocol_utils import Binder
 import logs
-import cmus_utils
 from exceptions import EXCEPTIONS
 import config
 from __init__ import __version__
@@ -18,13 +17,13 @@ def type():
 
 @binder.bind()
 def pause():
-    cmus_utils.player_pause()
-    return {"request": "ok", "status": cmus_utils.get_player_status()}
+    binder.player.pause()
+    return {"request": "ok", "status": binder.player.get_json_status()}
 
 
 @binder.bind()
 def status():
-    stat = cmus_utils.get_player_status()
+    stat = binder.player.get_json_status()
     stat["locked"] = not binder.gaps.is_unlocked()
     return {"request": "ok", "status": stat}
 
@@ -32,29 +31,29 @@ def status():
 @binder.bind()
 @binder.requires_unlocked()
 def play():
-    cmus_utils.player_play()
-    return {"request": "ok", "status": cmus_utils.get_player_status()}
+    binder.player.play()
+    return {"request": "ok", "status": binder.player.get_json_status()}
 
 
 @binder.bind()
 @binder.requires_unlocked()
 def set_vol(value):
-    cmus_utils.set_vol(value)
+    binder.player.set_volume(int(value))
     return {"request": "ok"}
 
 
 @binder.bind()
 @binder.requires_unlocked()
 def play_next():
-    cmus_utils.player_next()
-    return {"request": "ok", "status": cmus_utils.get_player_status()}
+    binder.player.next_track()
+    return {"request": "ok", "status": binder.player.get_json_status()}
 
 
 @binder.bind()
 @binder.requires_unlocked()
 def play_prev():
-    cmus_utils.player_prev()
-    return {"request": "ok", "status": cmus_utils.get_player_status()}
+    binder.player.prev_track()
+    return {"request": "ok", "status": binder.player.get_json_status()}
 
 
 @binder.bind()
@@ -79,43 +78,31 @@ def get_albums(artist=None):
 
 @binder.bind()
 def add_to_queue(artist_id, album_id, track_id):
-    cmus_utils.add_to_queue_from_lib(binder.lib, artist_id, album_id, track_id)
-    return {"request": "ok", "queue": cmus_utils.get_queue()}
-
-
-@binder.bind()
-def set_queue(new_queue):
-    cmus_utils.clear_queue()
-    for track in new_queue:
-        cmus_utils.add_to_queue_from_lib(binder.lib, track.artist_id, track.album_id, track.track_id)
-    return {"request": "ok", "queue": cmus_utils.get_queue()}
+    binder.player.add_to_queue(binder.lib.get_artist(artist_id).get_album(album_id).get_track(track_id))
+    return {"request": "ok"}
 
 
 @binder.bind()
 def clear_queue():
-    cmus_utils.clear_queue()
+    binder.player.clear_queue()
     return {"request": "ok"}
 
 
 @binder.bind()
 @binder.requires_unlocked()
 def set_queue_to_single_track(artist_id, album_id, track_id, start_playing=False):
-    cmus_utils.clear_queue()
-    cmus_utils.add_to_queue_from_lib(binder.lib, artist_id, album_id, track_id)
-    cmus_utils.exec_cmus_command("set play_library=false")
+    binder.player.load(binder.lib.get_artist(artist_id).get_album(album_id).get_track(track_id))
     if start_playing:
-        cmus_utils.player_next()
-        cmus_utils.player_play()
+        binder.player.play()
     return {"request": "ok"}
 
 
 @binder.bind()
 def get_current_queue():
-    q = cmus_utils.get_queue()
+    q = binder.player.get_queue()
+    print q
     tracks = []
-    for path in q:
-        logs.print_debug([path])
-        track = binder.lib.get_track_by_filename(path)
+    for track in q:
         tracks.append({
             "artist_id": track.artist.id,
             "artist": track.artist.name,

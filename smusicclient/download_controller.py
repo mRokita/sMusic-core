@@ -11,7 +11,6 @@ import os
 import shutil
 import re
 import config
-import cmus_utils
 import logs
 
 
@@ -172,7 +171,7 @@ class DownloadQueueThread(Thread):
                 file_path = target_dir + "/" + safe_filename(self.queue[0].track) + "_" + random_string() + "." + self.downloader.downloaded_path().split(".")[-1]
                 shutil.move(self.downloader.downloaded_path(), file_path)
 
-                cmus_utils.add_to_library(file_path)
+                #cmus_utils.add_to_library(file_path)
                 del self.queue[0]
                 self.downloader = None
                 if len(self.queue) > 0:

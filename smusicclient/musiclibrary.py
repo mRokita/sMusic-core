@@ -9,6 +9,8 @@ from whoosh.analysis import NgramWordAnalyzer
 from whoosh.collectors import TimeLimitCollector, TimeLimit
 from whoosh.filedb.filestore import RamStorage
 from mutagen import File
+from os import walk
+from os.path import join
 
 PATTERN_DATE = re.compile("\d\d\d\d")
 
@@ -20,6 +22,16 @@ def id_from_tag(tag):
         if char in "abcdefghijklmnopqrstuvwxyz1234567890":
             my_id += char
     return my_id
+
+
+def get_file_list(dir):
+    ret = []
+    for root, dirs, files in walk(dir):
+        for file in files:
+            for extension in [".mp2", ".mp3", ".oga", ".ogg", ".mp4", ".m4a", ".aac", ".wav", ".opus"]:
+                if file.endswith(extension):
+                    ret.append(join(root, file))
+    return ret
 
 
 def parse_library(lib_files):
@@ -127,6 +139,7 @@ class Album:
         self.id = id_from_tag(name)
         self.name = name
         self.artist = library.get_artist(artist_id)
+        """:type : Artist"""
         self.artist.add_album(self)
         self.year = year
 
@@ -158,7 +171,9 @@ class Track:
         self._library = library
         self.id = id_from_tag(track.tag.title)
         self.album = library.get_artist(id_from_tag(track.tag.artist)).get_album(id_from_tag(track.tag.album))
+        """:type : Album"""
         self.artist = self.album.artist
+        """:type : Artist"""
         self.title = track.tag.title
         self.length = track.length
         self.tracknumber = track.tag.tracknumber
