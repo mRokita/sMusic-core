@@ -12,6 +12,7 @@ import shutil
 import re
 import config
 import logs
+from musiclibrary import TrackInfo
 
 
 class DownloadObject:
@@ -170,8 +171,7 @@ class DownloadQueueThread(Thread):
                     os.makedirs(target_dir)
                 file_path = target_dir + "/" + safe_filename(self.queue[0].track) + "_" + random_string() + "." + self.downloader.downloaded_path().split(".")[-1]
                 shutil.move(self.downloader.downloaded_path(), file_path)
-
-                #cmus_utils.add_to_library(file_path)
+                library.add_track(TrackInfo(file_path))
                 del self.queue[0]
                 self.downloader = None
                 if len(self.queue) > 0:
@@ -216,7 +216,9 @@ class DownloadQueueThread(Thread):
             self.downloader.stop()
 
 
-def init():
+def init(p):
+    global library
     global thread
+    library = p
     thread = DownloadQueueThread()
     thread.start()

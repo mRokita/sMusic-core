@@ -100,7 +100,6 @@ def set_queue_to_single_track(artist_id, album_id, track_id, start_playing=False
 @binder.bind()
 def get_current_queue():
     q = binder.player.get_queue()
-    print q
     tracks = []
     for track in q:
         tracks.append({

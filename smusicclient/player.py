@@ -63,7 +63,8 @@ class Stream(Thread):
 
         stream.stop_stream()
         self.__pyaudio.terminate()
-        self.on_terminated()
+        if self.__position < len(self.__chunks) and self.__active:
+            self.on_terminated()
 
 
 class Player:
@@ -92,6 +93,9 @@ class Player:
 
     def add_to_queue(self, track):
         self.__queue.insert(0, track)
+
+    def get_queue(self):
+        return list(self.__queue.__reversed__())
 
     def clear_queue(self):
         self.__queue = []
@@ -153,9 +157,6 @@ class Player:
         if self.__stream:
             self.__stream.seek(seconds)
 
-    def get_queue(self):
-        return list(self.__queue.__reversed__())
-
     def next_track(self):
         self.kill_stream()
         if self.__queue:
@@ -171,4 +172,5 @@ def get_musiclibrary():
     lib_files = musiclibrary.get_file_list(config.library_path)
     global lib
     lib = musiclibrary.parse_library(lib_files)
+    """:type :musiclibrary.MusicLibrary"""
     return lib
