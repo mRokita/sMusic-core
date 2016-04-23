@@ -124,8 +124,8 @@ class Player:
                 "status": "playing" if self.is_playing() else "paused"}
         if self.track:
                 data["file"] = self.track.file
-                data["position"] = [self.get_position()]
-                data["duration"] = [self.get_duration()]
+                data["position"] = self.get_position()
+                data["duration"] = self.get_duration()
                 data["artist"] = self.track.artist.name
                 data["album"] = self.track.album.name
                 data["title"] = self.track.title
