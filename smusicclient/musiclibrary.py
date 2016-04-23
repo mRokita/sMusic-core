@@ -84,7 +84,11 @@ class Tag:
 
 class TrackInfo:
     def __init__(self, path):
-        f = File(path, easy=True)
+        try:
+            f = File(path, easy=True)
+        except Exception as e:
+            logging.error("Couldn't parse tag for {}".format(path))
+            f = None
         try:
             self.length = f.info.length
         except AttributeError:
