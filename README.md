@@ -1,5 +1,5 @@
 # sMusic-core
-### Elementy systemu kontrolujące CMUSa
+### Elementy systemu odtwarzające muzykę
 
 ### Czym jest sMusic
 sMusic jest oprogramowaniem udostępnionym na licencji ruchu wolnego oprogramowania służącym do zdalnego sterowania szkolnym radiowęzłem przez aplikację webową dostosowaną do urządzeń mobilnych.
