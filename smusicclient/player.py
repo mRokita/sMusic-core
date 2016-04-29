@@ -12,11 +12,11 @@ mixer = Mixer(cardindex=config.cardindex)
 class Stream(Thread):
     def __init__(self, f, on_terminated):
         self.__active = True
+        self.__path = f
         self.__paused = True
-        self.__segment = AudioSegment.from_file(f)
         self.on_terminated = on_terminated
         self.__position = 0
-        self.__chunks = make_chunks(self.__segment, 100)
+        self.__chunks = []
         self.__pyaudio = PyAudio()
         Thread.__init__(self)
         self.start()
@@ -43,6 +43,8 @@ class Stream(Thread):
         self.__active = False
 
     def __get_stream(self):
+        self.__segment = AudioSegment.from_file(self.__path)
+        self.__chunks = make_chunks(self.__segment, 100)
         return self.__pyaudio.open(format=self.__pyaudio.get_format_from_width(self.__segment.sample_width),
                                    channels=self.__segment.channels,
                                    rate=self.__segment.frame_rate,
