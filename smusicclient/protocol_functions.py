@@ -189,3 +189,8 @@ def search_for_track(query):
                         "album_id": track.album.id,
                         "id": track.id} for track in binder.lib.search_for_track(query)]
             }
+
+
+@binder.bind()
+def ping():
+    return {"request": "ok"}
