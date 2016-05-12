@@ -7,9 +7,14 @@ from inspect import getargspec
 import config
 from base64 import b64decode, b64encode
 from functools import partial, wraps
+import datetime
+import time
+import socket
+import ssl
 
 PATTERN_MSG = re.compile("([ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=+/]*?)\n(.+)?", re.DOTALL)
 
+timeout_time = datetime.timedelta(seconds=30)
 
 class Binder:
     def __init__(self):
@@ -73,36 +78,76 @@ class Binder:
 
 
 class ConnectionThread(Thread):
-    def __init__(self, conn, binder):
+    def __init__(self, binder):
         Thread.__init__(self)
         self.daemon = True
         self.__was_stopped = False
         logs.print_info("Łączenie z serwerem...")
-        self.conn = conn
         self.binder = binder
+        self.conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+        self.binder.set_connection(self.conn)
         self.conn.connect((config.server_host, config.server_port))
         logs.print_info("Połączono z serwerem!")
+        self.__is_connected = True
+        self.last_seen = datetime.datetime.now()
 
     def run(self):
         logs.print_info("Oczekiwanie na handshake...")
-        buff = ""
         msg = self.conn.read()
-        while msg and not self.__was_stopped:
-            parsed_msg = PATTERN_MSG.findall(msg)
-            if len(parsed_msg) == 1 and len(parsed_msg[0]) == 2:
-                buff += parsed_msg[0][1]
-                esc_string = parsed_msg[0][0]
+        Thread(target=self.__pinger).start()
+        buff = ""
+        while not self.__was_stopped:
+            buff += msg
+            self.last_seen = datetime.datetime.now()
+            if '\n' in msg:
+                esc_string = buff[:buff.index('\n')]
+                buff = buff[buff.index('\n') + 1:]
                 data = json.loads(un_escape(esc_string))
                 logs.print_debug("RECEIVED: %s" % data)
                 if "request" in data:
                     Thread(target=partial(self.binder.handle_message, data, self.conn)).start()
-            else:
-                buff = ""
-            msg = self.conn.read()
+            while not self.__is_connected:
+                pass
+            try:
+                msg = self.conn.read()
+            except socket.error as e:
+                logs.print_warning("socket.error while waiting for server request: %s" % e)
+                self.__is_connected = False
+            if not msg:
+                logs.print_warning("Serwer zamknal polaczenie")
+                self.__is_connected = False
 
     def stop(self):
         self.__was_stopped = True
         self.conn.close()
+
+    def reconnect(self):
+        logs.print_info("Proba ponownego nawiazania polaczenia")
+        try:
+            self.conn.close()
+        except Exception as e:
+            logs.print_debug("exception while closing connection in reconnecting: %s" % e)
+        self.conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+        self.binder.set_connection(self.conn)
+        try:
+            self.conn.settimeout(10)
+            self.conn.connect((config.server_host, config.server_port))
+            self.conn.settimeout(None)
+            self.__is_connected = True
+            self.last_seen = datetime.datetime.now()
+            logs.print_info("Nawiazano polaczenie ponownie")
+        except socket.error as e:
+            logs.print_warning("exception while trying to reconnewct: %s " % e)
+
+    def __pinger(self):
+        while not self.__was_stopped:
+            if datetime.datetime.now() - self.last_seen > timeout_time:
+                logs.print_debug("Serwer przekroczyl czas oczekiwania na odpowiedz")
+                self.reconnect()
+            # TODO dodać wysyłanie pingów
+            if not self.__is_connected:
+                self.reconnect()
+            time.sleep(1)
 
 
 def escape(msg):
