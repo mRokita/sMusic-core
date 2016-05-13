@@ -12,6 +12,7 @@ from whoosh.fields import Schema, TEXT, ID
 from whoosh.filedb.filestore import RamStorage
 from whoosh.qparser import MultifieldParser
 from whoosh.query import *
+import string
 
 PATTERN_DATE = re.compile("\d\d\d\d")
 
@@ -20,7 +21,7 @@ def id_from_tag(tag):
     tag = tag.lower()
     my_id = str()
     for char in tag:
-        if char in "abcdefghijklmnopqrstuvwxyz1234567890":
+        if char in string.ascii_lowercase + string.digits:
             my_id += char
     return my_id
 
@@ -253,8 +254,8 @@ class MusicLibrary:
     def search_for_track(self, querystring):
         if len(querystring) >= 3:
             with self.ix.searcher() as searcher:
-                colector = searcher.collector(limit=20)
-                tlc = TimeLimitCollector(colector, timelimit=1.4, use_alarm=False)
+                collector = searcher.collector(limit=20)
+                tlc = TimeLimitCollector(collector, timelimit=1.4, use_alarm=False)
                 parser = MultifieldParser(["artist", "album", "title"], self.ix.schema)
                 parser.add_plugin(qparser.FuzzyTermPlugin())
                 myquery = parser.parse(querystring)
@@ -265,7 +266,7 @@ class MusicLibrary:
                         searcher.search_with_collector(myquery, tlc)
                 except TimeLimit:
                     logging.info("Time Limit for query reached!")
-                logging.debug("czas zapytania: ", colector.runtime)
+                logging.debug("czas zapytania: ", collector.runtime)
                 ret = [self.__tracks[int(result["id"])] for result in tlc.results()]
                 return ret
         else:

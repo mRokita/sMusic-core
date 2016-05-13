@@ -15,7 +15,7 @@ from mutagen import File
 
 import config
 import logs
-from musiclibrary import TrackInfo
+from music_library import TrackInfo
 
 library = None
 thread = None
@@ -195,9 +195,9 @@ class DownloadQueueThread(Thread):
     def get_status(self):
         if self.downloader is not None:
             return {"status": "downloading",
-                    "progress": self.downloader.progress(),  # postep w procentach
-                    "speed": self.downloader.speed(),  # predkosc w bps
-                    "eta": self.downloader.eta(),  # pozostaly czas w sekundach
+                    "progress": self.downloader.progress(),  # postęp w procentach
+                    "speed": self.downloader.speed(),  # prędkość w bps
+                    "eta": self.downloader.eta(),  # pozostały czas w sekundach
                     "queue_len": len(self.queue)}
         else:
             return {"status": "idle"}

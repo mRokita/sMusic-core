@@ -7,7 +7,7 @@ from pydub import AudioSegment
 from pydub.utils import make_chunks
 
 import config
-import musiclibrary
+import music_library
 
 mixer = Mixer(cardindex=config.cardindex)
 lib = None
@@ -175,8 +175,8 @@ class Player:
 
 
 def get_musiclibrary():
-    lib_files = musiclibrary.get_file_list(config.library_path)
+    lib_files = music_library.get_file_list(config.library_path)
     global lib
-    lib = musiclibrary.parse_library(lib_files)
+    lib = music_library.parse_library(lib_files)
     """:type :musiclibrary.MusicLibrary"""
     return lib
