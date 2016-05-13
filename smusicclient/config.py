@@ -1,5 +1,6 @@
-import json
 import ConfigParser
+import json
+
 import os.path
 
 conf = ConfigParser.ConfigParser()

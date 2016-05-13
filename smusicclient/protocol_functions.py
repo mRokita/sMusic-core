@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-from protocol_utils import Binder
-import logs
-from exceptions import EXCEPTIONS
 import config
-from __init__ import __version__
 import download_controller
+import logs
+from __init__ import __version__
+from exceptions import EXCEPTIONS
+from protocol_utils import Binder
 
 binder = Binder()
 

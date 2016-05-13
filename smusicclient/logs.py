@@ -1,7 +1,9 @@
-import logging
-import os
-import config
 import datetime
+import logging
+
+import os
+
+import config
 
 
 def setup_logging():

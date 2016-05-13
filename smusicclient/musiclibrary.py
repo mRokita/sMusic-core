@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from whoosh import qparser
-from whoosh.fields import Schema, TEXT, ID
-from whoosh.query import *
-from whoosh.qparser import MultifieldParser
-from whoosh.analysis import NgramWordAnalyzer
-from whoosh.collectors import TimeLimitCollector, TimeLimit
-from whoosh.filedb.filestore import RamStorage
-from mutagen import File
 import mutagen
+from mutagen import File
 from os import walk
 from os.path import join
+from whoosh import qparser
+from whoosh.analysis import NgramWordAnalyzer
+from whoosh.collectors import TimeLimitCollector, TimeLimit
+from whoosh.fields import Schema, TEXT, ID
+from whoosh.filedb.filestore import RamStorage
+from whoosh.qparser import MultifieldParser
+from whoosh.query import *
 
 PATTERN_DATE = re.compile("\d\d\d\d")
 
@@ -48,7 +48,7 @@ def parse_library(lib_files):
     for f in lib_files[:-1]:
         track_info = TrackInfo(f)
         lib.add_track_internal(track_info, writer)
-        current_percent_done_str = "%d%%" % (i/lib_length*100)
+        current_percent_done_str = "%d%%" % (i / lib_length * 100)
         if current_percent_done_str != previous_procent_done_str:
             logging.debug("Analizowanie biblioteki muzycznej... " + current_percent_done_str)
             previous_procent_done_str = current_percent_done_str
@@ -102,33 +102,34 @@ class TrackInfo:
 
 
 class Artist:
-        """
-        Klasa reprezentująca artystę
-        """
-        def __init__(self, library, name):
-            self._albums = list()
-            self._library = library
-            self.id = id_from_tag(name)
-            self.name = name
-            self._tracks = list()
+    """
+    Klasa reprezentująca artystę
+    """
 
-        def __str__(self):
-            return "Artist(\"{}\", {})".format(self.name.encode("utf-8"), [str(album) for album in self._albums])
+    def __init__(self, library, name):
+        self._albums = list()
+        self._library = library
+        self.id = id_from_tag(name)
+        self.name = name
+        self._tracks = list()
 
-        def add_album(self, album):
-            self._albums.append(album)
+    def __str__(self):
+        return "Artist(\"{}\", {})".format(self.name.encode("utf-8"), [str(album) for album in self._albums])
 
-        def add_track(self, track):
-            self._tracks.append(track)
+    def add_album(self, album):
+        self._albums.append(album)
 
-        def get_album(self, album):
-            album_id = id_from_tag(album)
-            for album in self._albums:
-                if album.id == album_id:
-                    return album
+    def add_track(self, track):
+        self._tracks.append(track)
 
-        def get_albums(self):
-            return self._albums
+    def get_album(self, album):
+        album_id = id_from_tag(album)
+        for album in self._albums:
+            if album.id == album_id:
+                return album
+
+    def get_albums(self):
+        return self._albums
 
 
 class Album:
@@ -139,6 +140,7 @@ class Album:
      artist_id - nazwa artysty [string]
      year - rok [string -> int]
     """
+
     def __init__(self, library, artist_id, name, year):
         self._tracks = list()
         self._library = library
@@ -172,6 +174,7 @@ class Track:
     library - [MusicLirary]
     track - [TrackInfo]
     """
+
     def __init__(self, library, track):
         self.file = track.path
         self._library = library
@@ -258,7 +261,7 @@ class MusicLibrary:
                 try:
                     searcher.search_with_collector(myquery, tlc)
                     if len(tlc.results()) == 0:
-                        myquery = parser.parse(" ".join(word+"~2" for word in querystring.split()))
+                        myquery = parser.parse(" ".join(word + "~2" for word in querystring.split()))
                         searcher.search_with_collector(myquery, tlc)
                 except TimeLimit:
                     logging.info("Time Limit for query reached!")

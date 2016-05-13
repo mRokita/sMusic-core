@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
+from alsaaudio import Mixer
+from threading import Thread
+
+from pyaudio import PyAudio
 from pydub import AudioSegment
 from pydub.utils import make_chunks
-from pyaudio import PyAudio
-from threading import Thread
-import musiclibrary
-from alsaaudio import Mixer
+
 import config
+import musiclibrary
+
 mixer = Mixer(cardindex=config.cardindex)
 lib = None
+
 
 class Stream(Thread):
     def __init__(self, f, on_terminated):
@@ -25,16 +29,16 @@ class Stream(Thread):
         self.__paused = False
 
     def seek(self, seconds):
-        self.__position = int(seconds*10)
+        self.__position = int(seconds * 10)
 
     def is_playing(self):
         return self.__active and not self.__paused
 
     def get_position(self):
-        return int(self.__position/10)
+        return int(self.__position / 10)
 
     def get_duration(self):
-        return int(len(self.__chunks)/10)
+        return int(len(self.__chunks) / 10)
 
     def pause(self):
         self.__paused = True
@@ -61,7 +65,7 @@ class Stream(Thread):
                 self.__position += 1
             else:
                 free = stream.get_write_available()
-                data = chr(0)*free
+                data = chr(0) * free
             stream.write(data)
 
         stream.stop_stream()
@@ -129,12 +133,12 @@ class Player:
                 "vol_right": vol[0] if len(vol) == 1 else vol[1],
                 "status": "playing" if self.is_playing() else "paused"}
         if self.track:
-                data["file"] = self.track.file
-                data["position"] = self.get_position()
-                data["duration"] = self.get_duration()
-                data["artist"] = self.track.artist.name
-                data["album"] = self.track.album.name
-                data["title"] = self.track.title
+            data["file"] = self.track.file
+            data["position"] = self.get_position()
+            data["duration"] = self.get_duration()
+            data["artist"] = self.track.artist.name
+            data["album"] = self.track.album.name
+            data["title"] = self.track.title
         return data
 
     def pause(self):

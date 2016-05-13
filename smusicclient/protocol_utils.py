@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
-from threading import Thread
-import logs
-import json
-import re
-from inspect import getargspec
-import config
-from base64 import b64decode, b64encode
-from functools import partial, wraps
 import datetime
-import time
+import json
 import socket
 import ssl
+import time
+from base64 import b64decode, b64encode
+from functools import partial, wraps
+from inspect import getargspec
+from threading import Thread
+
+import re
+
+import config
+import logs
 
 PATTERN_MSG = re.compile("([ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=+/]*?)\n(.+)?", re.DOTALL)
 
@@ -46,7 +48,9 @@ class Binder:
                     return function(*args, **kwargs)
                 else:
                     return {"request": "error", "type": "locked", "comment": "Sterowanie zablokowane", "cat": "=^..^="}
+
             return decorated
+
         return wrapped
 
     def bind(self):
@@ -63,6 +67,7 @@ class Binder:
                 "args": args
             }
             return function
+
         return bind
 
     def handle_message(self, data, conn):
