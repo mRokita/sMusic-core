@@ -100,9 +100,6 @@ class Player:
     def get_queue(self):
         return list(self.__queue.__reversed__())
 
-    def clear_queue(self):
-        self.__queue = []
-
     @staticmethod
     def set_volume(value):
         mixer.setvolume(value)
