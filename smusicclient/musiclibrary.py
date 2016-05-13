@@ -9,6 +9,7 @@ from whoosh.analysis import NgramWordAnalyzer
 from whoosh.collectors import TimeLimitCollector, TimeLimit
 from whoosh.filedb.filestore import RamStorage
 from mutagen import File
+import mutagen
 from os import walk
 from os.path import join
 
@@ -86,8 +87,9 @@ class TrackInfo:
     def __init__(self, path):
         try:
             f = File(path, easy=True)
-        except Exception as e:
+        except mutagen.MutagenError as e:
             logging.error("Couldn't parse tag for {}".format(path))
+            logging.error(e)
             f = None
         try:
             self.length = f.info.length
