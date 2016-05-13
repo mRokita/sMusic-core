@@ -24,13 +24,13 @@ def id_from_tag(tag):
     return my_id
 
 
-def get_file_list(dir):
+def get_file_list(f_dir):
     ret = []
-    for root, dirs, files in walk(dir):
-        for file in files:
+    for root, dirs, files in walk(f_dir):
+        for file_name in files:
             for extension in [".mp2", ".mp3", ".oga", ".ogg", ".mp4", ".m4a", ".aac", ".wav", ".opus"]:
-                if file.endswith(extension):
-                    ret.append(join(root, file))
+                if file_name.endswith(extension):
+                    ret.append(join(root, file_name))
     return ret
 
 
