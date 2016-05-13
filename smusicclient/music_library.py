@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from whoosh import qparser
-from whoosh.fields import Schema, TEXT, ID
-from whoosh.query import *
-from whoosh.qparser import MultifieldParser
-from whoosh.analysis import NgramWordAnalyzer
-from whoosh.collectors import TimeLimitCollector, TimeLimit
-from whoosh.filedb.filestore import RamStorage
+import mutagen
 from mutagen import File
 from os import walk
 from os.path import join
+from whoosh import qparser
+from whoosh.analysis import NgramWordAnalyzer
+from whoosh.collectors import TimeLimitCollector, TimeLimit
+from whoosh.fields import Schema, TEXT, ID
+from whoosh.filedb.filestore import RamStorage
+from whoosh.qparser import MultifieldParser
+from whoosh.query import *
+import string
 
 PATTERN_DATE = re.compile("\d\d\d\d")
 
@@ -19,18 +21,18 @@ def id_from_tag(tag):
     tag = tag.lower()
     my_id = str()
     for char in tag:
-        if char in "abcdefghijklmnopqrstuvwxyz1234567890":
+        if char in string.ascii_lowercase + string.digits:
             my_id += char
     return my_id
 
 
-def get_file_list(dir):
+def get_file_list(f_dir):
     ret = []
-    for root, dirs, files in walk(dir):
-        for file in files:
+    for root, dirs, files in walk(f_dir):
+        for file_name in files:
             for extension in [".mp2", ".mp3", ".oga", ".ogg", ".mp4", ".m4a", ".aac", ".wav", ".opus"]:
-                if file.endswith(extension):
-                    ret.append(join(root, file))
+                if file_name.endswith(extension):
+                    ret.append(join(root, file_name))
     return ret
 
 
@@ -47,7 +49,7 @@ def parse_library(lib_files):
     for f in lib_files[:-1]:
         track_info = TrackInfo(f)
         lib.add_track_internal(track_info, writer)
-        current_percent_done_str = "%d%%" % (i/lib_length*100)
+        current_percent_done_str = "%d%%" % (i / lib_length * 100)
         if current_percent_done_str != previous_procent_done_str:
             logging.debug("Analizowanie biblioteki muzycznej... " + current_percent_done_str)
             previous_procent_done_str = current_percent_done_str
@@ -86,8 +88,9 @@ class TrackInfo:
     def __init__(self, path):
         try:
             f = File(path, easy=True)
-        except Exception as e:
+        except mutagen.MutagenError as e:
             logging.error("Couldn't parse tag for {}".format(path))
+            logging.error(e)
             f = None
         try:
             self.length = f.info.length
@@ -100,33 +103,34 @@ class TrackInfo:
 
 
 class Artist:
-        """
-        Klasa reprezentująca artystę
-        """
-        def __init__(self, library, name):
-            self._albums = list()
-            self._library = library
-            self.id = id_from_tag(name)
-            self.name = name
-            self._tracks = list()
+    """
+    Klasa reprezentująca artystę
+    """
 
-        def __str__(self):
-            return "Artist(\"{}\", {})".format(self.name.encode("utf-8"), [str(album) for album in self._albums])
+    def __init__(self, library, name):
+        self._albums = list()
+        self._library = library
+        self.id = id_from_tag(name)
+        self.name = name
+        self._tracks = list()
 
-        def add_album(self, album):
-            self._albums.append(album)
+    def __str__(self):
+        return "Artist(\"{}\", {})".format(self.name.encode("utf-8"), [str(album) for album in self._albums])
 
-        def add_track(self, track):
-            self._tracks.append(track)
+    def add_album(self, album):
+        self._albums.append(album)
 
-        def get_album(self, album):
-            album_id = id_from_tag(album)
-            for album in self._albums:
-                if album.id == album_id:
-                    return album
+    def add_track(self, track):
+        self._tracks.append(track)
 
-        def get_albums(self):
-            return self._albums
+    def get_album(self, album):
+        album_id = id_from_tag(album)
+        for album in self._albums:
+            if album.id == album_id:
+                return album
+
+    def get_albums(self):
+        return self._albums
 
 
 class Album:
@@ -137,6 +141,7 @@ class Album:
      artist_id - nazwa artysty [string]
      year - rok [string -> int]
     """
+
     def __init__(self, library, artist_id, name, year):
         self._tracks = list()
         self._library = library
@@ -170,6 +175,7 @@ class Track:
     library - [MusicLirary]
     track - [TrackInfo]
     """
+
     def __init__(self, library, track):
         self.file = track.path
         self._library = library
@@ -248,19 +254,19 @@ class MusicLibrary:
     def search_for_track(self, querystring):
         if len(querystring) >= 3:
             with self.ix.searcher() as searcher:
-                colector = searcher.collector(limit=20)
-                tlc = TimeLimitCollector(colector, timelimit=1.4, use_alarm=False)
+                collector = searcher.collector(limit=20)
+                tlc = TimeLimitCollector(collector, timelimit=1.4, use_alarm=False)
                 parser = MultifieldParser(["artist", "album", "title"], self.ix.schema)
                 parser.add_plugin(qparser.FuzzyTermPlugin())
                 myquery = parser.parse(querystring)
                 try:
                     searcher.search_with_collector(myquery, tlc)
                     if len(tlc.results()) == 0:
-                        myquery = parser.parse(" ".join(word+"~2" for word in querystring.split()))
+                        myquery = parser.parse(" ".join(word + "~2" for word in querystring.split()))
                         searcher.search_with_collector(myquery, tlc)
                 except TimeLimit:
                     logging.info("Time Limit for query reached!")
-                logging.debug("czas zapytania: ", colector.runtime)
+                logging.debug("czas zapytania: ", collector.runtime)
                 ret = [self.__tracks[int(result["id"])] for result in tlc.results()]
                 return ret
         else:

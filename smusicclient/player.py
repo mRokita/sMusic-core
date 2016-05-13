@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
+from alsaaudio import Mixer
+from threading import Thread
+
+from pyaudio import PyAudio
 from pydub import AudioSegment
 from pydub.utils import make_chunks
-from pyaudio import PyAudio
-from threading import Thread
-import musiclibrary
-from alsaaudio import Mixer
+
 import config
+import music_library
+
 mixer = Mixer(cardindex=config.cardindex)
+lib = None
 
 
 class Stream(Thread):
@@ -25,16 +29,16 @@ class Stream(Thread):
         self.__paused = False
 
     def seek(self, seconds):
-        self.__position = int(seconds*10)
+        self.__position = int(seconds * 10)
 
     def is_playing(self):
         return self.__active and not self.__paused
 
     def get_position(self):
-        return int(self.__position/10)
+        return int(self.__position / 10)
 
     def get_duration(self):
-        return int(len(self.__chunks)/10)
+        return int(len(self.__chunks) / 10)
 
     def pause(self):
         self.__paused = True
@@ -56,11 +60,12 @@ class Stream(Thread):
             if not self.__active:
                 break
             if not self.__paused:
+                # noinspection PyProtectedMember
                 data = self.__chunks[self.__position]._data
                 self.__position += 1
             else:
                 free = stream.get_write_available()
-                data = chr(0)*free
+                data = chr(0) * free
             stream.write(data)
 
         stream.stop_stream()
@@ -99,9 +104,6 @@ class Player:
     def get_queue(self):
         return list(self.__queue.__reversed__())
 
-    def clear_queue(self):
-        self.__queue = []
-
     @staticmethod
     def set_volume(value):
         mixer.setvolume(value)
@@ -131,12 +133,12 @@ class Player:
                 "vol_right": vol[0] if len(vol) == 1 else vol[1],
                 "status": "playing" if self.is_playing() else "paused"}
         if self.track:
-                data["file"] = self.track.file
-                data["position"] = self.get_position()
-                data["duration"] = self.get_duration()
-                data["artist"] = self.track.artist.name
-                data["album"] = self.track.album.name
-                data["title"] = self.track.title
+            data["file"] = self.track.file
+            data["position"] = self.get_position()
+            data["duration"] = self.get_duration()
+            data["artist"] = self.track.artist.name
+            data["album"] = self.track.album.name
+            data["title"] = self.track.title
         return data
 
     def pause(self):
@@ -171,9 +173,10 @@ class Player:
     def prev_track(self):
         self.seek(0)
 
+
 def get_musiclibrary():
-    lib_files = musiclibrary.get_file_list(config.library_path)
+    lib_files = music_library.get_file_list(config.library_path)
     global lib
-    lib = musiclibrary.parse_library(lib_files)
+    lib = music_library.parse_library(lib_files)
     """:type :musiclibrary.MusicLibrary"""
     return lib

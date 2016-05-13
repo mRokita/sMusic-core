@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime, timedelta
-import time
-import config
-from threading import Thread
 import logging
+import time
+from datetime import datetime, timedelta
+from threading import Thread
+
+import config
 
 gap_list = []
 
@@ -36,7 +37,7 @@ def load_gaps():
     for el in config.gaps:
         gap_list.append(Gap(datetime.strptime(el[0], "%H:%M").time(), datetime.strptime(el[1], "%H:%M").time()))
         logging.info("Załadowano przerwę od {} do {}".format(
-            gap_list[gap_list.count(0)-1].beginning, gap_list[gap_list.count(0)-1].ending))
+            gap_list[gap_list.count(0) - 1].beginning, gap_list[gap_list.count(0) - 1].ending))
 
 
 class GapThread(Thread):

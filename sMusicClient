@@ -3,20 +3,21 @@
 """
 Bardzo minimalny testowy klient TCP
 """
-from smusicclient import config
-import socket
-import ssl
-from smusicclient import gaps_controller as gaps
+import time
+
+from smusicclient import __version__
 from smusicclient import download_controller
+from smusicclient import gaps_controller as gaps
 from smusicclient import logs
+from smusicclient import player
 from smusicclient.protocol_functions import binder
 from smusicclient.protocol_utils import ConnectionThread
-from smusicclient import player
-import time
-import subprocess
-from smusicclient import __version__
+
 binds = {}
 was_interrupted = False
+thread_conn = None
+thread_gap = None
+
 
 def start_connection():
     global thread_conn
@@ -32,6 +33,7 @@ def init_gaps():
     gaps.load_gaps()
     thread_gap = gaps.GapThread(p)
     thread_gap.start()
+
 
 if __name__ == "__main__":
     logs.setup_logging()

@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
-from threading import Thread
-import logs
-import json
-import re
-from inspect import getargspec
-import config
-from base64 import b64decode, b64encode
-from functools import partial, wraps
 import datetime
-import time
+import json
 import socket
 import ssl
+import time
+from base64 import b64decode, b64encode
+from functools import partial, wraps
+from inspect import getargspec
+from threading import Thread
 
-PATTERN_MSG = re.compile("([ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=+/]*?)\n(.+)?", re.DOTALL)
+import config
+import logs
 
 timeout_time = datetime.timedelta(seconds=30)
+
 
 class Binder:
     def __init__(self):
@@ -45,7 +44,9 @@ class Binder:
                     return function(*args, **kwargs)
                 else:
                     return {"request": "error", "type": "locked", "comment": "Sterowanie zablokowane", "cat": "=^..^="}
+
             return decorated
+
         return wrapped
 
     def bind(self):
@@ -58,10 +59,11 @@ class Binder:
                 req_args = args
             self.binds[function.__name__] = {
                 "target": function,
-                "reqired_args": req_args,
+                "required_args": req_args,
                 "args": args
             }
             return function
+
         return bind
 
     def handle_message(self, data, conn):
@@ -114,7 +116,7 @@ class ConnectionThread(Thread):
                 logs.print_warning("socket.error while waiting for server request: %s" % e)
                 self.__is_connected = False
             if not msg:
-                logs.print_warning("Serwer zamknal polaczenie")
+                logs.print_warning("Serwer zamknął połączenie")
                 self.__is_connected = False
 
     def stop(self):
@@ -122,7 +124,7 @@ class ConnectionThread(Thread):
         self.conn.close()
 
     def reconnect(self):
-        logs.print_info("Proba ponownego nawiazania polaczenia")
+        logs.print_info("Próba ponownego nawiązania połączenia")
         try:
             self.conn.close()
         except Exception as e:
@@ -135,14 +137,14 @@ class ConnectionThread(Thread):
             self.conn.settimeout(None)
             self.__is_connected = True
             self.last_seen = datetime.datetime.now()
-            logs.print_info("Nawiazano polaczenie ponownie")
+            logs.print_info("Nawiązano połączenie ponownie")
         except socket.error as e:
-            logs.print_warning("exception while trying to reconnewct: %s " % e)
+            logs.print_warning("exception while trying to reconnect: %s " % e)
 
     def __pinger(self):
         while not self.__was_stopped:
             if datetime.datetime.now() - self.last_seen > timeout_time:
-                logs.print_debug("Serwer przekroczyl czas oczekiwania na odpowiedz")
+                logs.print_debug("Serwer przekroczył czas oczekiwania na odpowiedz")
                 self.reconnect()
             # TODO dodać wysyłanie pingów
             if not self.__is_connected:

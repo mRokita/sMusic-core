@@ -1,18 +1,24 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, division
-from threading import Thread
-import time
-import youtube_dl
-from string import join
-from mutagen import File
+
 import random
-import string
-import os
 import shutil
+import string
+import time
+from string import join
+from threading import Thread
+
+import os
 import re
+import youtube_dl
+from mutagen import File
+
 import config
 import logs
-from musiclibrary import TrackInfo
+from music_library import TrackInfo
+
+library = None
+thread = None
 
 
 class DownloadObject:
@@ -45,7 +51,7 @@ class YoutubeDLDownloadThread(Thread):
         if data[u"status"] == u"downloading":
             self.__speed = data[u"speed"]
             self.__progress = (data[u'downloaded_bytes'] / data[u'total_bytes']) * 0.99
-            self.__eta = data[u'eta']+10
+            self.__eta = data[u'eta'] + 10
         elif data[u"status"] == u"finished":
             logs.print_debug(data)
             self.__progress = 0.99
@@ -71,7 +77,7 @@ class YoutubeDLDownloadThread(Thread):
                 ydl.download([self.url])
                 for i in os.listdir("/tmp/smusic"):
                     if os.path.isfile(os.path.join("/tmp/smusic", i)) and \
-                                      i.startswith(join(self.__tmpfilename.split('.')[:-1], '.').split('/')[-1]):
+                            i.startswith(join(self.__tmpfilename.split('.')[:-1], '.').split('/')[-1]):
                         self.__filename = "/tmp/smusic/" + i
                 self.success = True
                 self.__eta = 0
@@ -157,7 +163,8 @@ class DownloadQueueThread(Thread):
                     if re.search('[a-zA-Z0-9]', f.get("title", "")):
                         self.queue[0].track = f["title"]
                     else:
-                        self.queue[0].track = join(self.downloader.downloaded_path().split("/")[-1].split(".")[0:-1], '.')
+                        self.queue[0].track = join(self.downloader.downloaded_path().split("/")[-1].split(".")[0:-1],
+                                                   '.')
                         f["title"] = self.queue[0].track
                 else:
                     f["title"] = self.queue[0].track
@@ -169,7 +176,8 @@ class DownloadQueueThread(Thread):
                                    safe_filename(self.queue[0].album)], "/")
                 if not os.path.exists(target_dir):
                     os.makedirs(target_dir)
-                file_path = target_dir + "/" + safe_filename(self.queue[0].track) + "_" + random_string() + "." + self.downloader.downloaded_path().split(".")[-1]
+                file_path = target_dir + "/" + safe_filename(self.queue[0].track) + "_" + random_string() + "." + \
+                    self.downloader.downloaded_path().split(".")[-1]
                 shutil.move(self.downloader.downloaded_path(), file_path)
                 library.add_track(TrackInfo(file_path))
                 del self.queue[0]
@@ -187,9 +195,9 @@ class DownloadQueueThread(Thread):
     def get_status(self):
         if self.downloader is not None:
             return {"status": "downloading",
-                    "progress": self.downloader.progress(),  # postep w procentach
-                    "speed": self.downloader.speed(),  # predkosc w bps
-                    "eta": self.downloader.eta(),  # pozostaly czas w sekundach
+                    "progress": self.downloader.progress(),  # postęp w procentach
+                    "speed": self.downloader.speed(),  # prędkość w bps
+                    "eta": self.downloader.eta(),  # pozostały czas w sekundach
                     "queue_len": len(self.queue)}
         else:
             return {"status": "idle"}
