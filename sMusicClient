@@ -3,9 +3,6 @@
 """
 Bardzo minimalny testowy klient TCP
 """
-from smusicclient import config
-import socket
-import ssl
 from smusicclient import gaps_controller as gaps
 from smusicclient import download_controller
 from smusicclient import logs
@@ -13,7 +10,6 @@ from smusicclient.protocol_functions import binder
 from smusicclient.protocol_utils import ConnectionThread
 from smusicclient import player
 import time
-import subprocess
 from smusicclient import __version__
 binds = {}
 was_interrupted = False
