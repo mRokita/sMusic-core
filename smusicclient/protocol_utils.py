@@ -9,12 +9,8 @@ from functools import partial, wraps
 from inspect import getargspec
 from threading import Thread
 
-import re
-
 import config
 import logs
-
-PATTERN_MSG = re.compile("([ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=+/]*?)\n(.+)?", re.DOTALL)
 
 timeout_time = datetime.timedelta(seconds=30)
 
