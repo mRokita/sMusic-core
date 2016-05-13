@@ -13,6 +13,8 @@ import time
 from smusicclient import __version__
 binds = {}
 was_interrupted = False
+thread_conn = None
+thread_gap = None
 
 
 def start_connection():

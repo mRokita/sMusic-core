@@ -7,7 +7,7 @@ import musiclibrary
 from alsaaudio import Mixer
 import config
 mixer = Mixer(cardindex=config.cardindex)
-
+lib = None
 
 class Stream(Thread):
     def __init__(self, f, on_terminated):

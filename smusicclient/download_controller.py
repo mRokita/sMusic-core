@@ -13,7 +13,8 @@ import re
 import config
 import logs
 from musiclibrary import TrackInfo
-
+library = None
+thread = None
 
 class DownloadObject:
     def __init__(self, url, artist="", album="", track=""):
