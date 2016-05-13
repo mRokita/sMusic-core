@@ -2,6 +2,7 @@
 index/
 logs/
 client.ini
+venv/
 
 ### Python template
 # Byte-compiled / optimized / DLL files
