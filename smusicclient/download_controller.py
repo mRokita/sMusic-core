@@ -157,7 +157,8 @@ class DownloadQueueThread(Thread):
                     if re.search('[a-zA-Z0-9]', f.get("title", "")):
                         self.queue[0].track = f["title"]
                     else:
-                        self.queue[0].track = join(self.downloader.downloaded_path().split("/")[-1].split(".")[0:-1], '.')
+                        self.queue[0].track = join(self.downloader.downloaded_path().split("/")[-1].split(".")[0:-1],
+                                                   '.')
                         f["title"] = self.queue[0].track
                 else:
                     f["title"] = self.queue[0].track
@@ -169,7 +170,8 @@ class DownloadQueueThread(Thread):
                                    safe_filename(self.queue[0].album)], "/")
                 if not os.path.exists(target_dir):
                     os.makedirs(target_dir)
-                file_path = target_dir + "/" + safe_filename(self.queue[0].track) + "_" + random_string() + "." + self.downloader.downloaded_path().split(".")[-1]
+                file_path = target_dir + "/" + safe_filename(self.queue[0].track) + "_" + random_string() + "." + \
+                            self.downloader.downloaded_path().split(".")[-1]
                 shutil.move(self.downloader.downloaded_path(), file_path)
                 library.add_track(TrackInfo(file_path))
                 del self.queue[0]

@@ -14,6 +14,7 @@ from smusicclient import __version__
 binds = {}
 was_interrupted = False
 
+
 def start_connection():
     global thread_conn
     binder.set_gaps_controller(gaps)

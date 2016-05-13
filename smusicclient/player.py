@@ -169,6 +169,7 @@ class Player:
     def prev_track(self):
         self.seek(0)
 
+
 def get_musiclibrary():
     lib_files = musiclibrary.get_file_list(config.library_path)
     global lib
