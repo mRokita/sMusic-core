@@ -56,6 +56,7 @@ class Stream(Thread):
             if not self.__active:
                 break
             if not self.__paused:
+                # noinspection PyProtectedMember
                 data = self.__chunks[self.__position]._data
                 self.__position += 1
             else:
