@@ -30,7 +30,7 @@ def get_file_list(f_dir):
     ret = []
     for root, dirs, files in walk(f_dir):
         for file_name in files:
-            for extension in [".mp2", ".mp3", ".oga", ".ogg", ".mp4", ".m4a", ".aac", ".wav", ".opus"]:
+            for extension in [".m4b", ".mp2", ".mp3", ".oga", ".ogg", ".mp4", ".m4a", ".aac", ".wav", ".webm", ".vox", ".tta", ".raw", ".ra", ".aax", ".3gp", ".aa", ".act", ".aiff", ".opus", ".flac", ".ape", ".amr", ".awb", ".dvf", ".dss", ".dct", ".gsm"]:
                 if file_name.endswith(extension):
                     ret.append(join(root, file_name))
     return ret
