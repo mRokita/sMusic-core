@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+from json import loads, dumps
 
 import mutagen
 from mutagen import File
@@ -27,13 +28,17 @@ def id_from_tag(tag):
 
 
 def get_file_list(f_dir):
-    ret = []
+    tracks = []
+    playlists = []
     for root, dirs, files in walk(f_dir):
         for file_name in files:
+            if file_name.endswith(".smusicplaylist"):
+                playlists.append(join(root, file_name))
+                continue
             for extension in [".m4b", ".mp2", ".mp3", ".oga", ".ogg", ".mp4", ".m4a", ".aac", ".wav", ".webm", ".vox", ".tta", ".raw", ".ra", ".aax", ".3gp", ".aa", ".act", ".aiff", ".opus", ".flac", ".ape", ".amr", ".awb", ".dvf", ".dss", ".dct", ".gsm"]:
                 if file_name.endswith(extension):
-                    ret.append(join(root, file_name))
-    return ret
+                    tracks.append(join(root, file_name))
+    return tracks, playlists
 
 
 def parse_library(lib_files):
@@ -41,12 +46,14 @@ def parse_library(lib_files):
     Analizuje pliki podane w liście lib_files
     Zwraca instancję MusicLibrary
     """
+    tracks, playlists = lib_files
     lib = MusicLibrary()
-    lib_length = len(lib_files)
+    lib_length = len(tracks)
     i = 0
+
     writer = lib.ix.writer()
     previous_procent_done_str = ""
-    for f in lib_files[:-1]:
+    for f in tracks[:-1]:
         track_info = TrackInfo(f)
         lib.add_track_internal(track_info, writer)
         current_percent_done_str = "%d%%" % (i / lib_length * 100)
@@ -54,11 +61,16 @@ def parse_library(lib_files):
             logging.debug("Analizowanie biblioteki muzycznej... " + current_percent_done_str)
             previous_procent_done_str = current_percent_done_str
         i += 1.0
+    logging.debug("Analizowanie playlist...")
+    for f in playlists:
+        with open(f, 'r') as fo:
+            playlist_dict = loads(fo.read())
+            playlist = Playlist(lib, f, playlist_dict['title'], playlist_dict['tracks'])
+            lib.add_playlist(playlist)
     writer.commit()
     logging.debug("Optymalizacja index-u...")
     lib.ix.optimize()
     return lib
-
 
 class Tag:
     def __init__(self, tags):
@@ -101,6 +113,47 @@ class TrackInfo:
         if not self.tag.title:
             self.tag.title = self.path
 
+
+class Playlist:
+    """
+    Klasa reprezentująca playlistę
+    """
+
+    def __init__(self, library, file, name, tracks_list):
+        self._tracks = list()
+        self._library = library
+        self.file = file
+        self.id = id_from_tag(name)
+        self.name = name
+        logging.debug("Ładowanie playlisty \"{}\"...".format(self.name))
+        for track_info in tracks_list:
+            track = self._library.get_artist(track_info['artist_id']).get_album(track_info['album_id']).get_track(track_info['track_id'])
+            if track:
+                self._tracks.append(track)
+            else:
+                logging.warning("Nie znaleziono utworu \"{}\"".format(str(track_info)))
+        logging.debug("Załadowano {} utworów!".format(len(self._tracks)))
+
+    def get_tracks(self):
+        return [track for track in self._tracks]
+
+    def add_track(self, track):
+        self._tracks.append(track)
+        self.save()
+
+    def del_track(self, index):
+        del self._tracks[index]
+        self.save()
+
+    def to_dict(self):
+        return{'title': self.name, 'tracks':
+            [{'artist_id': t.artist.id, 'album_id': t.album.id, 'track_id': t.id} for t in self._tracks]}
+
+    def save(self):
+        with open(self.file, 'w+') as fo:
+            fo.write(dumps(
+                indent=4,
+                data=self.to_dict()))
 
 class Artist:
     """
@@ -199,6 +252,7 @@ class MusicLibrary:
         self.__artists = dict()
         self.__albums = dict()
         self.__tracks = list()
+        self.__playlists = list()
         analyzer = NgramWordAnalyzer(minsize=3)
         schema = Schema(title=TEXT(analyzer=analyzer, phrase=False), artist=TEXT(analyzer=analyzer, phrase=False),
                         album=TEXT(analyzer=analyzer, phrase=False), id=ID(stored=True))
@@ -232,6 +286,19 @@ class MusicLibrary:
             track_id = len(self.__tracks) - 1
             writer.add_document(title=unicode(track.title), artist=unicode(track.artist.name),
                                 album=unicode(track.album.name), id=unicode(track_id))
+
+    def add_playlist(self, playlist):
+        self.__playlists.append(playlist)
+
+    def get_playlist(self, playlist_name):
+        id = id_from_tag(playlist_name)
+        for p in self.__playlists:
+            if p.id == id:
+                return p
+        return None
+
+    def get_playlists(self):
+        return [p for p in self.__playlists]
 
     def add_track(self, track_info):
         writer = self.ix.writer()

@@ -87,6 +87,18 @@ def add_to_queue(artist_id, album_id, track_id):
     binder.player.add_to_queue(binder.lib.get_artist(artist_id).get_album(album_id).get_track(track_id))
     return {"request": "ok"}
 
+@binder.bind()
+def add_playlist_to_queue(playlist_id):
+    playlist = binder.lib.get_playlist(playlist_id)
+    for t in playlist.get_tracks():
+        binder.player.add_to_queue(t)
+    return {"request": "ok"}
+
+@binder.bind()
+def get_playlist(playlist_id):
+    playlist = binder.lib.get_playlist(playlist_id)
+    return {"request": "ok", "playlist": playlist.to_dict()}
+
 
 @binder.bind()
 def clear_queue():
