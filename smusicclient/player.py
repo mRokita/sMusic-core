@@ -101,9 +101,10 @@ class Player:
             self.__queue[-1].file if (len(self.__queue) and self.__queue[-1].file != self.cached_next_file) else None
 
     def __load(self, track):
-        self.cached_next.kill()
-        self.cached_next = None
-        self.cached_next_file = None
+        if self.cached_next:
+            self.cached_next.kill()
+            self.cached_next = None
+            self.cached_next_file = None
         self.kill_stream()
         self.track = track
         self.__stream = Stream(self.track.file, self.next_track)
