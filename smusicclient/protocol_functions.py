@@ -123,6 +123,13 @@ def create_playlist(playlist_name):
 
 
 @binder.bind()
+def change_playlist_order(playlist_id, source_index, dest_index):
+    p = binder.lib.get_playlist(playlist_id)
+    p.move_track(int(source_index), int(dest_index))
+    return {"request": "ok", "playlist": p.to_www()}
+
+
+@binder.bind()
 def del_playlist(playlist_id):
     binder.lib.del_playlist(playlist_id)
     return {"request": "ok"}

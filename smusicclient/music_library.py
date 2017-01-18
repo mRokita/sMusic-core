@@ -147,6 +147,10 @@ class Playlist:
         del self._tracks[index]
         self.save()
 
+    def move_track(self, source_index, dest_index):
+        self._tracks.insert(dest_index, self._tracks.pop(source_index))
+        self.save()
+
     def to_www(self):
         return {
             "name": self.name,
