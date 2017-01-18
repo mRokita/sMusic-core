@@ -87,6 +87,7 @@ def add_to_queue(artist_id, album_id, track_id):
     binder.player.add_to_queue(binder.lib.get_artist(artist_id).get_album(album_id).get_track(track_id))
     return {"request": "ok"}
 
+
 @binder.bind()
 def add_playlist_to_queue(playlist_id):
     playlist = binder.lib.get_playlist(playlist_id)
@@ -94,10 +95,57 @@ def add_playlist_to_queue(playlist_id):
         binder.player.add_to_queue(t)
     return {"request": "ok"}
 
+
+@binder.bind()
+def set_queue_to_playlist(playlist_id, start_playing=False):
+    playlist = binder.lib.get_playlist(playlist_id)
+    binder.player.clear_queue()
+    for i, t in enumerate(playlist.get_tracks()):
+        if i == 0:
+            binder.player.load(t)
+        else:
+            binder.player.add_to_queue(t)
+    if start_playing:
+        binder.player.play()
+    return {"request": "ok"}
+
+
 @binder.bind()
 def get_playlist(playlist_id):
     playlist = binder.lib.get_playlist(playlist_id)
-    return {"request": "ok", "playlist": playlist.to_dict()}
+    return {"request": "ok", "playlist": playlist.to_www()}
+
+
+@binder.bind()
+def create_playlist(playlist_name):
+    playlists = binder.lib.create_playlist(playlist_name)
+    return {"request": "ok", "playlists": [p.to_www() for p in playlists]}
+
+
+@binder.bind()
+def del_playlist(playlist_id):
+    binder.lib.del_playlist(playlist_id)
+    return {"request": "ok"}
+
+
+@binder.bind()
+def add_track_to_playlist(playlist_id, artist_id, album_id, track_id):
+    playlist = binder.lib.get_playlist(playlist_id)
+    track = binder.lib.get_artist(artist_id).get_album(album_id).get_track(track_id)
+    playlist.add_track(track)
+    return {"request": "ok"}
+
+
+@binder.bind()
+def del_track_from_playlist(playlist_id, track_num):
+    playlist = binder.lib.get_playlist(playlist_id)
+    playlist.del_track(int(track_num))
+    return {"request": "ok", "playlist": playlist.to_www()}
+
+
+@binder.bind()
+def get_playlists():
+    return {"request": "ok", "playlists": [p.to_www() for p in binder.lib.get_playlists()]}
 
 
 @binder.bind()

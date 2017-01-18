@@ -4,7 +4,7 @@ from json import loads, dumps
 
 import mutagen
 from mutagen import File
-from os import walk
+from os import walk, remove
 from os.path import join
 from whoosh import qparser
 from whoosh.analysis import NgramWordAnalyzer
@@ -14,6 +14,8 @@ from whoosh.filedb.filestore import RamStorage
 from whoosh.qparser import MultifieldParser
 from whoosh.query import *
 import string
+
+from smusicclient import config
 
 PATTERN_DATE = re.compile("\d\d\d\d")
 
@@ -145,6 +147,28 @@ class Playlist:
         del self._tracks[index]
         self.save()
 
+    def to_www(self):
+        return {
+            "name": self.name,
+            "id": self.id,
+            "file": self.file,
+            "tracks": [
+                {
+                    "artist_id": track.artist.id,
+                    "artist": track.artist.name,
+                    "title": track.title,
+                    "album_id": track.album.id,
+                    "album": track.album.name,
+                    "file": track.file,
+                    "id": track.id,
+                    "length": track.length,
+                    "length_readable": "0".join(
+                        ("%2.2s:%2.2s" % (int(track.length // 60), int(track.length % 60))).split(" "))
+                }
+                for track in self.get_tracks()
+            ]
+        }
+
     def to_dict(self):
         return{'title': self.name, 'tracks':
             [{'artist_id': t.artist.id, 'album_id': t.album.id, 'track_id': t.id} for t in self._tracks]}
@@ -153,7 +177,8 @@ class Playlist:
         with open(self.file, 'w+') as fo:
             fo.write(dumps(
                 indent=4,
-                data=self.to_dict()))
+                obj=self.to_dict()))
+
 
 class Artist:
     """
@@ -296,6 +321,21 @@ class MusicLibrary:
             if p.id == id:
                 return p
         return None
+
+    def create_playlist(self, playlist_name):
+        p = Playlist(self, tracks_list=[],
+                     file=join(config.library_path, id_from_tag(playlist_name)+'.smusicplaylist'),
+                     name=playlist_name)
+        p.save()
+        self.add_playlist(p)
+        return self.get_playlists()
+
+    def del_playlist(self, playlist_id):
+        for i, p in enumerate(self.__playlists):
+            if p.id == playlist_id:
+                remove(p.file)
+                del self.__playlists[i]
+                return
 
     def get_playlists(self):
         return [p for p in self.__playlists]
