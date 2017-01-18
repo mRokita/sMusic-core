@@ -76,6 +76,8 @@ class Stream(Thread):
 
 class Player:
     def __init__(self):
+        self.cached_next = None
+        self.cached_next_file = None
         self.track = None
         """:type : musiclibrary.Track"""
         self.__queue = []
@@ -93,13 +95,24 @@ class Player:
     def set_queue(self, queue):
         self.__queue = queue.__reversed__()
 
+        self.cached_next = Stream(self.__queue[-1].file, self.next_track) if \
+            (len(self.__queue) and self.__queue[-1].file!=self.cached_next_file) else None
+        self.cached_next_file = \
+            self.__queue[-1].file if (len(self.__queue) and self.__queue[-1].file != self.cached_next_file) else None
+
     def __load(self, track):
+        self.cached_next.kill()
+        self.cached_next = None
+        self.cached_next_file = None
         self.kill_stream()
         self.track = track
         self.__stream = Stream(self.track.file, self.next_track)
 
     def add_to_queue(self, track):
         self.__queue.insert(0, track)
+        if len(self.__queue) and self.__queue[-1].file!=self.cached_next_file:
+            self.cached_next = Stream(self.__queue[-1].file, self.next_track)
+            self.cached_next_file = self.__queue[-1].file
 
     def get_queue(self):
         return list(self.__queue.__reversed__())
@@ -165,10 +178,18 @@ class Player:
     def next_track(self):
         self.kill_stream()
         if self.__queue:
-            self.__load(self.__queue.pop())
+            if not self.cached_next:
+                self.__load(self.__queue.pop())
+            else:
+                self.__stream = self.cached_next
+                self.track = self.__queue.pop()
             self.play()
         else:
             self.track = None
+        self.cached_next = Stream(self.__queue[-1].file, self.next_track) if \
+            (len(self.__queue) and self.__queue[-1].file != self.cached_next_file) else None
+        self.cached_next_file = \
+            self.__queue[-1].file if (len(self.__queue) and self.__queue[-1].file != self.cached_next_file) else None
 
     def prev_track(self):
         self.seek(0)
