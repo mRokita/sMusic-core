@@ -247,7 +247,7 @@ class Player:
         are_equal = list(self.__queue.__reversed__())[self.queue_position + 1].file == self.cached_next_file
 
         if not are_equal:
-            self.cached_next.kill()
+            if self.cached_next: self.cached_next.kill()
             self.cached_next = Stream(list(self.__queue.__reversed__())[self.queue_position + 1].file, self.next_track, is_cache=True)
             self.cached_next_file = list(self.__queue.__reversed__())[self.queue_position + 1].file
 
