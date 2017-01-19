@@ -63,6 +63,7 @@ class Stream(Thread):
         i = 0
         while i < 10 and self.__paused and self.__active and self.__is_cache:
             sleep(0.1)
+            i += 1
         self.__make_chunks()
         while self.__paused and self.__active:
             sleep(0.1)
