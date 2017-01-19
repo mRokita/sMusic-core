@@ -108,7 +108,6 @@ def del_from_queue(pos):
 
 
 @binder.bind()
-@binder.requires_unlocked()
 def add_playlist_to_queue(playlist_id):
     playlist = binder.lib.get_playlist(playlist_id)
     for t in playlist.get_tracks():
@@ -117,6 +116,7 @@ def add_playlist_to_queue(playlist_id):
 
 
 @binder.bind()
+@binder.requires_unlocked()
 def set_queue_to_playlist(playlist_id, start_playing=False):
     playlist = binder.lib.get_playlist(playlist_id)
     binder.player.clear_queue()
