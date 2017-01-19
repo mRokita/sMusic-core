@@ -181,6 +181,7 @@ def clear_queue():
 @binder.bind()
 @binder.requires_unlocked()
 def set_queue_to_single_track(artist_id, album_id, track_id, start_playing=False):
+    binder.player.clear_queue()
     binder.player.add_to_queue(binder.lib.get_artist(artist_id).get_album(album_id).get_track(track_id))
     if start_playing:
         binder.player.play()
