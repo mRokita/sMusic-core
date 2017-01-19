@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from threading import Thread
 
 import config
+from smusicclient import logs
 
 gap_list = []
 
@@ -36,7 +37,7 @@ def is_unlocked():
 def load_gaps():
     for el in config.gaps:
         gap_list.append(Gap(datetime.strptime(el[0], "%H:%M").time(), datetime.strptime(el[1], "%H:%M").time()))
-        logging.info("Załadowano przerwę od {} do {}".format(
+        logs.print_info("Załadowano przerwę od {} do {}".format(
             gap_list[gap_list.count(0) - 1].beginning, gap_list[gap_list.count(0) - 1].ending))
 
 
@@ -53,11 +54,11 @@ class GapThread(Thread):
             unlocked = is_unlocked()
             if unlocked and last_state != STATE_UNLOCKED:
                 last_state = STATE_UNLOCKED
-                logging.debug("Odblokowano odtwarzacz")
+                logs.print_info("Odblokowano odtwarzacz")
             elif not unlocked and last_state != STATE_LOCKED:
                 self.player.pause()
                 last_state = STATE_LOCKED
-                logging.debug("Zablokowano odtwarzacz")
+                logs.print_info("Zablokowano odtwarzacz")
             time.sleep(1)
 
     def stop(self):

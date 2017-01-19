@@ -128,7 +128,7 @@ class DownloadQueueThread(Thread):
                 url = self.queue[0].url.split(';')[1]
                 if method == "youtube-dl":
                     self.downloader = YoutubeDLDownloadThread(url)
-                    logs.print_debug("Starting download of %s with youtube-dl" % url)
+                    logs.print_info("Starting download of %s with youtube-dl" % url)
                 else:
                     logs.print_error("Unknown download method %s" % method)
                     return
@@ -168,9 +168,8 @@ class DownloadQueueThread(Thread):
                         f["title"] = self.queue[0].track
                 else:
                     f["title"] = self.queue[0].track
-                print f.tags
                 f.save()
-
+                logs.print_info("Zapisano {}".format(f["title"]))
                 target_dir = join([config.download_path,
                                    safe_filename(self.queue[0].artist),
                                    safe_filename(self.queue[0].album)], "/")
