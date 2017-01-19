@@ -129,7 +129,11 @@ class Playlist:
         self.name = name
         logs.print_info("Ładowanie playlisty \"{}\"...".format(self.name))
         for track_info in tracks_list:
-            track = self._library.get_artist(track_info['artist_id']).get_album(track_info['album_id']).get_track(track_info['track_id'])
+            track = None
+            try:
+                track = self._library.get_artist(track_info['artist_id']).get_album(track_info['album_id']).get_track(track_info['track_id'])
+            except AttributeError:
+                pass
             if track:
                 self._tracks.append(track)
             else:
