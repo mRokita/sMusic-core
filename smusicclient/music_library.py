@@ -55,7 +55,7 @@ def parse_library(lib_files):
 
     writer = lib.ix.writer()
     previous_procent_done_str = ""
-    for f in tracks[:-1]:
+    for f in tracks:
         track_info = TrackInfo(f)
         lib.add_track_internal(track_info, writer)
         current_percent_done_str = "%d%%" % (i / lib_length * 100)
