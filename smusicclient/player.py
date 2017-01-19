@@ -61,7 +61,7 @@ class Stream(Thread):
 
     def run(self):
         i = 0
-        while i < 10 and self.__paused and self.__active and self.__is_cache:
+        while i < 40 and self.__paused and self.__active and self.__is_cache:
             sleep(0.1)
             i += 1
         logs.print_info("Decompressing {}".format(self.__path))
@@ -165,6 +165,8 @@ class Player:
 
     def add_to_queue(self, track):
         self.__queue.insert(0, track)
+        if len(self.__queue) == 1:
+            self.set_queue_position(0)
         self.__cache_next()
 
     def get_queue(self):
