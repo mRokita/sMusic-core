@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import logging
 from alsaaudio import Mixer
 from threading import Thread
 from time import sleep
@@ -15,7 +16,8 @@ lib = None
 
 
 class Stream(Thread):
-    def __init__(self, f, on_terminated):
+    def __init__(self, f, on_terminated, is_cache=False):
+        self.__is_cache = is_cache
         self.__active = True
         self.__path = f
         self.__paused = True
@@ -47,15 +49,21 @@ class Stream(Thread):
     def kill(self):
         self.__active = False
 
-    def __get_stream(self):
+    def __make_chunks(self):
         self.__segment = AudioSegment.from_file(self.__path)
         self.__chunks = make_chunks(self.__segment, 100)
+
+    def __get_stream(self):
         return self.__pyaudio.open(format=self.__pyaudio.get_format_from_width(self.__segment.sample_width),
                                    channels=self.__segment.channels,
                                    rate=self.__segment.frame_rate,
                                    output=True)
 
     def run(self):
+        i = 0
+        while i < 10 and self.__paused and self.__active and self.__is_cache:
+            sleep(0.1)
+        self.__make_chunks()
         while self.__paused and self.__active:
             sleep(0.1)
         stream = self.__get_stream()
@@ -229,7 +237,9 @@ class Player:
         self.__cache_next()
 
     def __cache_next(self):
-        self.cached_next = Stream(list(self.__queue.__reversed__())[self.queue_position + 1].file, self.next_track) if \
+        self.cached_next = \
+            Stream(
+                list(self.__queue.__reversed__())[self.queue_position + 1].file, self.next_track, is_cache=True) if \
             (self.queue_position + 1 < len(self.__queue) and list(self.__queue.__reversed__())[
                 self.queue_position + 1].file != self.cached_next_file) else None
         self.cached_next_file = \
