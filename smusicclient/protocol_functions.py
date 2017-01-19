@@ -42,7 +42,6 @@ def seek(position):
 
 
 @binder.bind()
-@binder.requires_unlocked()
 def set_vol(value):
     binder.player.set_volume(int(value))
     return {"request": "ok"}
@@ -95,6 +94,7 @@ def add_to_queue(artist_id, album_id, track_id):
 
 
 @binder.bind()
+@binder.requires_unlocked()
 def set_queue_position(pos):
     binder.player.set_queue_position(int(pos))
     binder.player.play()
@@ -108,6 +108,7 @@ def del_from_queue(pos):
 
 
 @binder.bind()
+@binder.requires_unlocked()
 def add_playlist_to_queue(playlist_id):
     playlist = binder.lib.get_playlist(playlist_id)
     for t in playlist.get_tracks():
