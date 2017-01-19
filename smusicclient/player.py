@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import logging
+import logs
 from alsaaudio import Mixer
 from threading import Thread
 from time import sleep
@@ -64,13 +64,18 @@ class Stream(Thread):
         while i < 10 and self.__paused and self.__active and self.__is_cache:
             sleep(0.1)
             i += 1
+        logs.print_info("Decompressing {}".format(self.__path))
         self.__make_chunks()
+        logs.print_info("Decompressed {}".format(self.__path))
+
         while self.__paused and self.__active:
             sleep(0.1)
-        stream = self.__get_stream()
+
+        stream = None
+        if self.__active: stream = self.__get_stream()
         while self.__position < len(self.__chunks):
             if not self.__active:
-                break
+                 break
             if not self.__paused:
                 # noinspection PyProtectedMember
                 data = self.__chunks[self.__position]._data
@@ -80,7 +85,7 @@ class Stream(Thread):
                 data = chr(0) * free
             stream.write(data)
 
-        stream.stop_stream()
+        if stream: stream.stop_stream()
         self.__pyaudio.terminate()
         if self.__active:
             self.on_terminated()
@@ -105,6 +110,11 @@ class Player:
     def clear_queue(self):
         self.__queue = []
         self.queue_position = -1
+        if self.cached_next:
+            self.cached_next.kill()
+            logs.print_error("kill %s" % self.cached_next_file)
+            self.cached_next = None
+            self.cached_next_file = None
 
     def move_queue_item(self, source_index, dest_index):
         if -1 < source_index < len(self.__queue) and -1 < dest_index < len(self.__queue):
@@ -130,12 +140,9 @@ class Player:
                     and self.__queue[self.queue_position+1].file != self.cached_next_file) else None
 
     def __load(self, track):
-        if self.cached_next:
-            self.cached_next.kill()
-            self.cached_next = None
-            self.cached_next_file = None
         self.kill_stream()
         self.track = track
+        logs.print_info("Loaded {}".format(self.track.title))
         self.__stream = Stream(self.track.file, self.next_track)
 
     def get_queue_position(self):
@@ -143,8 +150,8 @@ class Player:
 
     def set_queue_position(self, pos):
         if -1 < pos < len(self.__queue):
-            self.queue_position = pos-1
-            self.next_track()
+            self.queue_position = pos
+            self.__load(list(self.__queue.__reversed__())[pos])
 
     def del_from_queue(self, pos):
         helper_q = list(self.__queue.__reversed__())
@@ -207,6 +214,7 @@ class Player:
     def play(self):
         if self.__stream:
             self.__stream.play()
+            logs.print_info("Playing {}".format(self.track.title))
 
     def stop(self):
         if self.__stream:
@@ -227,8 +235,11 @@ class Player:
             self.queue_position += 1
             if not self.cached_next or self.cached_next_file != list(self.__queue.__reversed__())[self.queue_position].file:
                 self.__load(list(self.__queue.__reversed__())[self.queue_position])
+                self.play()
             else:
                 self.__stream = self.cached_next
+                self.cached_next = None
+                self.cached_next_file = None
                 self.track = list(self.__queue.__reversed__())[self.queue_position]
             self.play()
         else:
@@ -239,7 +250,8 @@ class Player:
 
     def __cache_next(self):
         if not self.queue_position + 1 < len(self.__queue):
-            if self.cached_next: self.cached_next.kill()
+            if self.cached_next:
+                self.cached_next.kill()
             self.cached_next = None
             self.cached_next_file = None
             return
@@ -247,7 +259,8 @@ class Player:
         are_equal = list(self.__queue.__reversed__())[self.queue_position + 1].file == self.cached_next_file
 
         if not are_equal:
-            if self.cached_next: self.cached_next.kill()
+            if self.cached_next:
+                self.cached_next.kill()
             self.cached_next = Stream(list(self.__queue.__reversed__())[self.queue_position + 1].file, self.next_track, is_cache=True)
             self.cached_next_file = list(self.__queue.__reversed__())[self.queue_position + 1].file
 

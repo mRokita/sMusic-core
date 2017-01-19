@@ -97,6 +97,7 @@ def add_to_queue(artist_id, album_id, track_id):
 @binder.bind()
 def set_queue_position(pos):
     binder.player.set_queue_position(int(pos))
+    binder.player.play()
     return get_current_queue()
 
 
@@ -120,7 +121,8 @@ def set_queue_to_playlist(playlist_id, start_playing=False):
     binder.player.clear_queue()
     for i, t in enumerate(playlist.get_tracks()):
         binder.player.add_to_queue(t)
-    binder.player.next_track()
+
+    binder.player.set_queue_position(0)
     if start_playing:
         binder.player.play()
     return {"request": "ok"}

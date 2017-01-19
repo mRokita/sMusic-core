@@ -13,7 +13,7 @@ def setup_logging():
 
     log_formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(logging.INFO)
 
     file_handler = logging.FileHandler("{0}/{1}.log".format(config.log_path, log_file_name))
     file_handler.setFormatter(log_formatter)

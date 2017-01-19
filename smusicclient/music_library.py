@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import logging
+import logs
 from json import loads, dumps
 
 import mutagen
@@ -60,17 +60,17 @@ def parse_library(lib_files):
         lib.add_track_internal(track_info, writer)
         current_percent_done_str = "%d%%" % (i / lib_length * 100)
         if current_percent_done_str != previous_procent_done_str:
-            logging.debug("Analizowanie biblioteki muzycznej... " + current_percent_done_str)
+            logs.print_info("Analizowanie biblioteki muzycznej... " + current_percent_done_str)
             previous_procent_done_str = current_percent_done_str
         i += 1.0
-    logging.debug("Analizowanie playlist...")
+    logs.print_info("Analizowanie playlist...")
     for f in playlists:
         with open(f, 'r') as fo:
             playlist_dict = loads(fo.read())
             playlist = Playlist(lib, f, playlist_dict['title'], playlist_dict['tracks'])
             lib.add_playlist(playlist)
     writer.commit()
-    logging.debug("Optymalizacja index-u...")
+    logs.print_info("Optymalizacja index-u...")
     lib.ix.optimize()
     return lib
 
@@ -103,8 +103,8 @@ class TrackInfo:
         try:
             f = File(path, easy=True)
         except mutagen.MutagenError as e:
-            logging.error("Couldn't parse tag for {}".format(path))
-            logging.error(e)
+            logs.print_error("Couldn't parse tag for {}".format(path))
+            logs.print_error(e)
             f = None
         try:
             self.length = f.info.length
@@ -127,14 +127,14 @@ class Playlist:
         self.file = file
         self.id = id_from_tag(name)
         self.name = name
-        logging.debug("Ładowanie playlisty \"{}\"...".format(self.name))
+        logs.print_info("Ładowanie playlisty \"{}\"...".format(self.name))
         for track_info in tracks_list:
             track = self._library.get_artist(track_info['artist_id']).get_album(track_info['album_id']).get_track(track_info['track_id'])
             if track:
                 self._tracks.append(track)
             else:
-                logging.warning("Nie znaleziono utworu \"{}\"".format(str(track_info)))
-        logging.debug("Załadowano {} utworów!".format(len(self._tracks)))
+                logs.print_warning("Nie znaleziono utworu \"{}\"".format(str(track_info)))
+        logs.print_info("Załadowano {} utworów!".format(len(self._tracks)))
 
     def get_tracks(self):
         return [track for track in self._tracks]
@@ -376,8 +376,8 @@ class MusicLibrary:
                         myquery = parser.parse(" ".join(word + "~2" for word in querystring.split()))
                         searcher.search_with_collector(myquery, tlc)
                 except TimeLimit:
-                    logging.info("Time Limit for query reached!")
-                logging.debug("czas zapytania: ", collector.runtime)
+                    logs.print_error("Time Limit for query reached!")
+                logs.print_debug("czas zapytania: ", collector.runtime)
                 ret = [self.__tracks[int(result["id"])] for result in tlc.results()]
                 return ret
         else:
@@ -397,7 +397,7 @@ class MusicLibrary:
         for track in self.__tracks:
             if track.file == filename:
                 return track
-        logging.error("file %s not found in library" % filename)
+        logs.print_error("file %s not found in library" % filename)
 
     def get_album(self, album):
         """
