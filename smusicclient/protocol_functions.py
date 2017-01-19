@@ -83,9 +83,27 @@ def get_albums(artist=None):
 
 
 @binder.bind()
+def move_queue_item(source_index, dest_index):
+    binder.player.move_queue_item(int(source_index), int(dest_index))
+    return get_current_queue()
+
+
+@binder.bind()
 def add_to_queue(artist_id, album_id, track_id):
     binder.player.add_to_queue(binder.lib.get_artist(artist_id).get_album(album_id).get_track(track_id))
     return {"request": "ok"}
+
+
+@binder.bind()
+def set_queue_position(pos):
+    binder.player.set_queue_position(int(pos))
+    return get_current_queue()
+
+
+@binder.bind()
+def del_from_queue(pos):
+    binder.player.del_from_queue(int(pos))
+    return get_current_queue()
 
 
 @binder.bind()
@@ -101,10 +119,8 @@ def set_queue_to_playlist(playlist_id, start_playing=False):
     playlist = binder.lib.get_playlist(playlist_id)
     binder.player.clear_queue()
     for i, t in enumerate(playlist.get_tracks()):
-        if i == 0:
-            binder.player.load(t)
-        else:
-            binder.player.add_to_queue(t)
+        binder.player.add_to_queue(t)
+    binder.player.next_track()
     if start_playing:
         binder.player.play()
     return {"request": "ok"}
@@ -175,7 +191,7 @@ def set_queue_to_single_track(artist_id, album_id, track_id, start_playing=False
 def get_current_queue():
     q = binder.player.get_queue()
     tracks = []
-    for track in q:
+    for i, track in enumerate(q):
         tracks.append({
             "artist_id": track.artist.id,
             "artist": track.artist.name,
@@ -183,6 +199,7 @@ def get_current_queue():
             "album_id": track.album.id,
             "album": track.album.name,
             "file": track.file,
+            "is_current": binder.player.get_queue_position() == i,
             "id": track.id,
             "length": track.length,
             "length_readable": "0".join(("%2.2s:%2.2s" % (int(track.length // 60), int(track.length % 60))).split(" "))

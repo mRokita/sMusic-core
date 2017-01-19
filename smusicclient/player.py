@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from alsaaudio import Mixer
 from threading import Thread
+from time import sleep
 
 from pyaudio import PyAudio
 from pydub import AudioSegment
@@ -55,6 +56,8 @@ class Stream(Thread):
                                    output=True)
 
     def run(self):
+        while self.__paused:
+            sleep(0.1)
         stream = self.__get_stream()
         while self.__position < len(self.__chunks):
             if not self.__active:
@@ -79,26 +82,43 @@ class Player:
         self.cached_next = None
         self.cached_next_file = None
         self.track = None
+        self.queue_position = -1
         """:type : musiclibrary.Track"""
         self.__queue = []
         self.__stream = None
 
     def load(self, track):
-        self.__queue = []
+        self.clear_queue()
         if self.__stream:
             self.__stream.kill()
         self.__load(track)
 
     def clear_queue(self):
         self.__queue = []
+        self.queue_position = -1
+
+    def move_queue_item(self, source_index, dest_index):
+        if -1 < source_index < len(self.__queue) and -1 < dest_index < len(self.__queue):
+            helper_q = list(self.__queue.__reversed__())
+            helper_q.insert(dest_index, helper_q.pop(source_index))
+            self.__queue = list(helper_q.__reversed__())
+            if dest_index <= self.queue_position < source_index:
+                self.queue_position += 1
+            elif source_index < self.queue_position <= dest_index:
+                self.queue_position -= 1
+            elif source_index == self.queue_position:
+                self.queue_position = dest_index
+            self.__cache_next()
 
     def set_queue(self, queue):
         self.__queue = queue.__reversed__()
-
-        self.cached_next = Stream(self.__queue[-1].file, self.next_track) if \
-            (len(self.__queue) and self.__queue[-1].file!=self.cached_next_file) else None
+        self.queue_position = -1
+        self.cached_next = Stream(self.__queue.__reversed__[self.queue_position+1].file, self.next_track) if \
+            (len(self.__queue) and self.__queue[self.queue_position+1].file != self.cached_next_file) else None
         self.cached_next_file = \
-            self.__queue[-1].file if (len(self.__queue) and self.__queue[-1].file != self.cached_next_file) else None
+            self.__queue[self.queue_position+1].file \
+                if (self.queue_position+1 < len(self.__queue)
+                    and self.__queue[self.queue_position+1].file != self.cached_next_file) else None
 
     def __load(self, track):
         if self.cached_next:
@@ -109,11 +129,27 @@ class Player:
         self.track = track
         self.__stream = Stream(self.track.file, self.next_track)
 
+    def get_queue_position(self):
+        return self.queue_position
+
+    def set_queue_position(self, pos):
+        if -1 < pos < len(self.__queue):
+            self.queue_position = pos-1
+            self.next_track()
+
+    def del_from_queue(self, pos):
+        helper_q = list(self.__queue.__reversed__())
+        del helper_q[pos]
+        self.__queue = list(helper_q.__reversed__())
+        if pos == self.queue_position:
+            self.queue_position -= 1
+            self.next_track()
+        elif pos < self.queue_position:
+            self.queue_position -= 1
+
     def add_to_queue(self, track):
         self.__queue.insert(0, track)
-        if len(self.__queue) and self.__queue[-1].file!=self.cached_next_file:
-            self.cached_next = Stream(self.__queue[-1].file, self.next_track)
-            self.cached_next_file = self.__queue[-1].file
+        self.__cache_next()
 
     def get_queue(self):
         return list(self.__queue.__reversed__())
@@ -178,22 +214,37 @@ class Player:
 
     def next_track(self):
         self.kill_stream()
-        if self.__queue:
-            if not self.cached_next:
-                self.__load(self.__queue.pop())
+        if self.queue_position+1 < len(self.__queue):
+            self.queue_position += 1
+            if not self.cached_next or self.cached_next_file != list(self.__queue.__reversed__())[self.queue_position].file:
+                self.__load(list(self.__queue.__reversed__())[self.queue_position])
             else:
                 self.__stream = self.cached_next
-                self.track = self.__queue.pop()
+                self.track = list(self.__queue.__reversed__())[self.queue_position]
             self.play()
         else:
             self.track = None
-        self.cached_next = Stream(self.__queue[-1].file, self.next_track) if \
-            (len(self.__queue) and self.__queue[-1].file != self.cached_next_file) else None
+            self.queue_position = len(self.__queue)
+            return
+        self.__cache_next()
+
+    def __cache_next(self):
+        self.cached_next = Stream(list(self.__queue.__reversed__())[self.queue_position + 1].file, self.next_track) if \
+            (self.queue_position + 1 < len(self.__queue) and list(self.__queue.__reversed__())[
+                self.queue_position + 1].file != self.cached_next_file) else None
         self.cached_next_file = \
-            self.__queue[-1].file if (len(self.__queue) and self.__queue[-1].file != self.cached_next_file) else None
+            list(self.__queue.__reversed__())[self.queue_position + 1].file \
+                if (self.queue_position + 1 < len(self.__queue)
+                    and list(self.__queue.__reversed__())[self.queue_position + 1].file != self.cached_next_file) \
+                else None
 
     def prev_track(self):
-        self.seek(0)
+        if self.queue_position <= 0:
+            self.seek(0)
+            return
+        else:
+            self.queue_position -= 2
+            self.next_track()
 
 
 def get_musiclibrary():
