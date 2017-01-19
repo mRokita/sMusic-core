@@ -56,7 +56,7 @@ class Stream(Thread):
                                    output=True)
 
     def run(self):
-        while self.__paused:
+        while self.__paused and self.__active:
             sleep(0.1)
         stream = self.__get_stream()
         while self.__position < len(self.__chunks):
