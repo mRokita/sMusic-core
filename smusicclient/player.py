@@ -238,16 +238,18 @@ class Player:
         self.__cache_next()
 
     def __cache_next(self):
-        self.cached_next = \
-            Stream(
-                list(self.__queue.__reversed__())[self.queue_position + 1].file, self.next_track, is_cache=True) if \
-            (self.queue_position + 1 < len(self.__queue) and list(self.__queue.__reversed__())[
-                self.queue_position + 1].file != self.cached_next_file) else None
-        self.cached_next_file = \
-            list(self.__queue.__reversed__())[self.queue_position + 1].file \
-                if (self.queue_position + 1 < len(self.__queue)
-                    and list(self.__queue.__reversed__())[self.queue_position + 1].file != self.cached_next_file) \
-                else None
+        if not self.queue_position + 1 < len(self.__queue):
+            if self.cached_next: self.cached_next.kill()
+            self.cached_next = None
+            self.cached_next_file = None
+            return
+
+        are_equal = list(self.__queue.__reversed__())[self.queue_position + 1].file == self.cached_next_file
+
+        if not are_equal:
+            self.cached_next.kill()
+            self.cached_next = Stream(list(self.__queue.__reversed__())[self.queue_position + 1].file, self.next_track, is_cache=True)
+            self.cached_next_file = list(self.__queue.__reversed__())[self.queue_position + 1].file
 
     def prev_track(self):
         if self.queue_position <= 0:
