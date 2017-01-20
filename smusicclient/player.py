@@ -95,7 +95,9 @@ class Stream(Thread):
 
 
 class Player:
-    def __init__(self):
+    def __init__(self, gaps):
+        """:type : gaps_controller"""
+        self.gaps = gaps
         self.cached_next = None
         self.cached_next_file = None
         self.track = None
@@ -219,7 +221,7 @@ class Player:
             self.__stream.pause()
 
     def play(self):
-        if self.__stream:
+        if self.__stream and self.gaps.is_unlocked():
             self.__stream.play()
             logs.print_info("Odtwarzanie {}".format(self.track.title))
 

@@ -23,7 +23,7 @@ def start_connection():
     global thread_conn
     binder.set_gaps_controller(gaps)
     binder.set_library(library)
-    binder.set_player(p)
+    binder.set_player(p, gaps)
     thread_conn = ConnectionThread(binder)
     thread_conn.start()
 
@@ -41,7 +41,7 @@ if __name__ == "__main__":
                     ("sMusic-core v{}".format(__version__).center(45, " ")) + "|\n|" +
                     "https://github.com/mRokita/sMusic-core".center(45, " ") +
                     "|\n+---------------------------------------------+\n")
-    p = player.Player()
+    p = player.Player(gaps)
     init_gaps()
     library = player.get_musiclibrary()
     download_controller.init(library)

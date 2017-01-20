@@ -48,14 +48,12 @@ def set_vol(value):
 
 
 @binder.bind()
-@binder.requires_unlocked()
 def play_next():
     binder.player.next_track()
     return {"request": "ok", "status": binder.player.get_json_status()}
 
 
 @binder.bind()
-@binder.requires_unlocked()
 def play_prev():
     binder.player.prev_track()
     return {"request": "ok", "status": binder.player.get_json_status()}
@@ -94,7 +92,6 @@ def add_to_queue(artist_id, album_id, track_id):
 
 
 @binder.bind()
-@binder.requires_unlocked()
 def set_queue_position(pos):
     binder.player.set_queue_position(int(pos))
     binder.player.play()
@@ -116,7 +113,6 @@ def add_playlist_to_queue(playlist_id):
 
 
 @binder.bind()
-@binder.requires_unlocked()
 def set_queue_to_playlist(playlist_id, start_playing=False):
     playlist = binder.lib.get_playlist(playlist_id)
     binder.player.clear_queue()
@@ -180,7 +176,6 @@ def clear_queue():
 
 
 @binder.bind()
-@binder.requires_unlocked()
 def set_queue_to_single_track(artist_id, album_id, track_id, start_playing=False):
     binder.player.clear_queue()
     binder.player.add_to_queue(binder.lib.get_artist(artist_id).get_album(album_id).get_track(track_id))
