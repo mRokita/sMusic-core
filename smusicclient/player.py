@@ -25,6 +25,7 @@ class Stream(Thread):
         self.__position = 0
         self.__chunks = []
         self.__pyaudio = PyAudio()
+        self.__done_terminated = False
         Thread.__init__(self)
         self.start()
 
@@ -32,6 +33,7 @@ class Stream(Thread):
         self.__paused = False
 
     def seek(self, seconds):
+        self.__done_terminated = False
         self.__position = int(seconds * 10)
 
     def is_playing(self):
@@ -76,28 +78,35 @@ class Stream(Thread):
 
         stream = None
         if self.__active: stream = self.__get_stream()
-        while self.__position < len(self.__chunks):
-            if not self.__active:
-                 break
-            if not self.__paused:
-                # noinspection PyProtectedMember
-                data = self.__chunks[self.__position]._data
-                self.__position += 1
+        while self.__active:
+            if self.__position < len(self.__chunks):
+                if not self.__paused:
+                    # noinspection PyProtectedMember
+                    data = self.__chunks[self.__position]._data
+                    self.__position += 1
+                else:
+                    free = stream.get_write_available()
+                    data = chr(0) * free
+                stream.write(data)
             else:
-                free = stream.get_write_available()
-                data = chr(0) * free
-            stream.write(data)
-
-        if stream: stream.stop_stream()
+                if not self.__done_terminated:
+                    self.on_terminated(is_call_internal=True)
+                else:
+                    self.kill()
+        if stream:
+            stream.stop_stream()
         self.__pyaudio.terminate()
-        if self.__active:
-            self.on_terminated()
 
 
 class Player:
+    MODE_NORMAL = "normal"
+    MODE_REPEAT = "repeat"
+    MODE_REPEAT_ONE = "repeat_one"
+
     def __init__(self, gaps):
         """:type : gaps_controller"""
         self.gaps = gaps
+        self.mode = Player.MODE_NORMAL
         self.cached_next = None
         self.cached_next_file = None
         self.track = None
@@ -111,6 +120,16 @@ class Player:
         if self.__stream:
             self.__stream.kill()
         self.__load(track)
+
+    def toggle_mode(self):
+        if self.mode == Player.MODE_NORMAL:
+            self.mode = Player.MODE_REPEAT
+        elif self.mode == Player.MODE_REPEAT:
+            self.mode = Player.MODE_REPEAT_ONE
+        elif self.mode == Player.MODE_REPEAT_ONE:
+            self.mode = Player.MODE_NORMAL
+        self.__cache_next()
+        return self.mode
 
     def clear_queue(self):
         if self.__stream:
@@ -149,7 +168,7 @@ class Player:
     def __load(self, track):
         self.kill_stream()
         self.track = track
-        logs.print_info("Ładowanie {}".format(self.track.title))
+        logs.print_info(u"Ładowanie {}".format(self.track.title))
         self.__stream = Stream(self.track.file, self.next_track)
 
     def get_queue_position(self):
@@ -206,7 +225,8 @@ class Player:
         vol = self.get_volume()
         data = {"vol_left": vol[0],
                 "vol_right": vol[0] if len(vol) == 1 else vol[1],
-                "status": "playing" if self.is_playing() else "paused"}
+                "status": "playing" if self.is_playing() else "paused",
+                "mode": self.mode}
         if self.track:
             data["file"] = self.track.file
             data["position"] = self.get_position()
@@ -229,19 +249,24 @@ class Player:
         if self.__stream:
             self.__stream.pause()
             self.__stream.seek(0)
-            logs.print_info("Zatrzymano {}".format(self.track.title))
+            logs.print_info(u"Zatrzymano {}".format(self.track.title))
 
     def kill_stream(self):
         if self.__stream:
             self.__stream.kill()
-            logs.print_info("Zabito strumień {}".format(self.__stream.get_file()))
+            logs.print_info(u"Zabito strumień {}".format(self.__stream.get_file()))
 
     def seek(self, seconds):
         if self.__stream:
             self.__stream.seek(seconds)
 
-    def next_track(self):
-        logs.print_info("Przechodzenie do kolejnego utworu")
+    def next_track(self, is_call_internal=False):
+        if is_call_internal and self.mode == Player.MODE_REPEAT_ONE:
+            self.seek(0)
+            self.play()
+            return
+
+        logs.print_info(u"Przechodzenie do kolejnego utworu")
         self.kill_stream()
         if self.queue_position+1 < len(self.__queue):
             self.queue_position += 1
@@ -254,6 +279,9 @@ class Player:
                 self.cached_next_file = None
                 self.track = list(self.__queue.__reversed__())[self.queue_position]
             self.play()
+        elif is_call_internal and self.mode == Player.MODE_REPEAT:
+            self.set_queue_position(0)
+            self.play()
         else:
             self.track = None
             self.queue_position = len(self.__queue)
@@ -261,28 +289,32 @@ class Player:
         self.__cache_next()
 
     def __cache_next(self):
-        if not self.queue_position + 1 < len(self.__queue):
+        next_position = self.queue_position + 1
+        if self.mode == Player.MODE_REPEAT and self.queue_position + 1 == len(self.__queue):
+            next_position = 0
+        if not next_position < len(self.__queue) or self.mode == Player.MODE_REPEAT_ONE:
             if self.cached_next:
-                logs.print_info("Usuwanie cache - {}".format(self.cached_next.get_file()))
+                logs.print_info(u"Usuwanie cache - {}".format(self.cached_next.get_file()))
                 self.cached_next.kill()
             self.cached_next = None
             self.cached_next_file = None
             return
 
-        are_equal = list(self.__queue.__reversed__())[self.queue_position + 1].file == self.cached_next_file
+        are_equal = list(self.__queue.__reversed__())[next_position].file == self.cached_next_file
 
         if not are_equal:
             if self.cached_next:
-                logs.print_info("Czyszczanie cache - {}".format(self.cached_next.get_file()))
+                logs.print_info(u"Czyszczenie cache - {}".format(self.cached_next.get_file()))
                 self.cached_next.kill()
-            self.cached_next = Stream(list(self.__queue.__reversed__())[self.queue_position + 1].file, self.next_track, is_cache=True)
-            self.cached_next_file = list(self.__queue.__reversed__())[self.queue_position + 1].file
-            logs.print_info("Cachowanie {}".format(self.cached_next.get_file()))
+            self.cached_next = Stream(list(self.__queue.__reversed__())[next_position].file, self.next_track, is_cache=True)
+            self.cached_next_file = list(self.__queue.__reversed__())[next_position].file
+            logs.print_info(u"Cachowanie {}".format(self.cached_next.get_file()))
 
     def prev_track(self):
-        logs.print_info("Przechodzenie do poprzedniego utworu")
+        logs.print_info(u"Przechodzenie do poprzedniego utworu")
         if self.queue_position <= 0:
             self.seek(0)
+            self.play()
             return
         else:
             self.queue_position -= 2

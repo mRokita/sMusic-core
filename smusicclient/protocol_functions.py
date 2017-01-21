@@ -60,6 +60,11 @@ def play_prev():
 
 
 @binder.bind()
+def toggle_mode():
+    return {"request": "ok", "mode": binder.player.toggle_mode()}
+
+
+@binder.bind()
 def get_artists():
     return {"request": "ok", "artists": [{"name": artist.name, "id": artist.id} for artist in
                                          sorted(binder.lib.get_artists().values(), key=lambda x: x.name)]}
