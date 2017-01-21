@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import time
+
 import logs
 from json import loads, dumps
 
@@ -174,11 +176,9 @@ class Playlist:
                     "id": track.id,
                     "length": track.length,
                     "position": pos,
-                    "position_readable": "0".join(
-                        ("%2.2s:%2.2s" % (int(pos // 60), int(pos % 60))).split(" ")),
-                    "length_readable": "0".join(
-                            ("%2.2s:%2.2s" % (int(track.length // 60), int(track.length % 60))).split(" "))
-                })
+                    "position_readable": time.strftime('%H:%M:%S' if pos > 3600 else '%M:%S', time.gmtime(pos)),
+                    "length_readable": time.strftime('%H:%M:%S' if track.length > 3600 else '%M:%S', time.gmtime(pos))
+            })
             pos += track.length
         return ret
 
