@@ -156,12 +156,15 @@ class Playlist:
         self.save()
 
     def to_www(self):
-        return {
+        pos = 0
+        ret = {
             "name": self.name,
             "id": self.id,
             "file": self.file,
-            "tracks": [
-                {
+            "tracks": []
+        }
+        for track in self.get_tracks():
+            ret["tracks"].append({
                     "artist_id": track.artist.id,
                     "artist": track.artist.name,
                     "title": track.title,
@@ -170,12 +173,14 @@ class Playlist:
                     "file": track.file,
                     "id": track.id,
                     "length": track.length,
+                    "position": pos,
+                    "position_readable": "0".join(
+                        ("%2.2s:%2.2s" % (int(pos // 60), int(pos % 60))).split(" ")),
                     "length_readable": "0".join(
-                        ("%2.2s:%2.2s" % (int(track.length // 60), int(track.length % 60))).split(" "))
-                }
-                for track in self.get_tracks()
-            ]
-        }
+                            ("%2.2s:%2.2s" % (int(track.length // 60), int(track.length % 60))).split(" "))
+                })
+            pos += track.length
+        return ret
 
     def to_dict(self):
         return{'title': self.name, 'tracks':
