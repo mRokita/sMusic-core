@@ -178,6 +178,7 @@ class Player:
         if -1 < pos < len(self.__queue):
             self.queue_position = pos
             self.__load(list(self.__queue.__reversed__())[pos])
+            self.__cache_next()
 
     def del_from_queue(self, pos):
         helper_q = list(self.__queue.__reversed__())
