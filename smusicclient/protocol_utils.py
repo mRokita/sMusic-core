@@ -150,7 +150,7 @@ class ConnectionThread(Thread):
     def reconnect(self):
         logs.print_info("Próba ponownego nawiązania połączenia")
         try:
-            self.conn.close()
+            self.sender_thread.close()
         except Exception as e:
             logs.print_debug("exception while closing connection in reconnecting: %s" % e)
         self.conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
@@ -159,12 +159,14 @@ class ConnectionThread(Thread):
             self.conn.settimeout(10)
             self.conn.connect((config.server_host, config.server_port))
             self.conn.settimeout(None)
+            self.sender_thread = SenderThread(self.conn)
+	    self.sender_thread.start()
             self.__is_connected = True
             self.last_seen = datetime.datetime.now()
             logs.print_info("Nawiązano połączenie ponownie")
         except socket.error as e:
             logs.print_warning("exception while trying to reconnect: %s " % e)
-
+	
     def __pinger(self):
         while not self.__was_stopped:
             if datetime.datetime.now() - self.last_seen > timeout_time:
