@@ -78,6 +78,28 @@ class Binder:
         logs.print_debug("RETURNING: %s" % ret)
         conn.send(escape(json.dumps(ret)))
 
+class SenderThread(Thread):
+    def __init__(self, conn):
+	Thread.__init__(self)
+	self.daemon = True
+	self.__was_stopped = False
+	self.__queue = []
+	self.__conn = conn
+
+    def send(self, data):
+	self.__queue.append(data)
+
+    def run(self):
+        while not self.__was_stopped:
+            if self.__queue:
+                self.__conn.send(self.__queue.pop())
+            else:
+	        time.sleep(0.01)
+	self.__conn.close()
+
+    def close():
+	self.__was_stopped = True
+
 
 class ConnectionThread(Thread):
     def __init__(self, binder):
@@ -92,6 +114,8 @@ class ConnectionThread(Thread):
         logs.print_info("Połączono z serwerem!")
         self.__is_connected = True
         self.last_seen = datetime.datetime.now()
+        self.sender_thread = SenderThread(self.conn)
+	self.sender_thread.start()
 
     def run(self):
         logs.print_info("Oczekiwanie na handshake...")
@@ -107,7 +131,7 @@ class ConnectionThread(Thread):
                 data = json.loads(un_escape(esc_string))
                 logs.print_debug("RECEIVED: %s" % data)
                 if "request" in data:
-                    Thread(target=partial(self.binder.handle_message, data, self.conn)).start()
+                    Thread(target=partial(self.binder.handle_message, data, self.sender_thread)).start()
             while not self.__is_connected:
                 pass
             try:

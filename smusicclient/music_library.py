@@ -34,7 +34,7 @@ def id_from_tag(tag):
 def get_file_list(f_dir):
     tracks = []
     playlists = []
-    for root, dirs, files in walk(f_dir):
+    for root, dirs, files in walk(f_dir, followlinks = True):
         for file_name in files:
             if file_name.endswith(".smusicplaylist"):
                 playlists.append(join(root, file_name))
@@ -157,14 +157,17 @@ class Playlist:
         self._tracks.insert(dest_index, self._tracks.pop(source_index))
         self.save()
 
-    def to_www(self):
+    def to_www(self, minimal=False):
         pos = 0
         ret = {
             "name": self.name,
             "id": self.id,
             "file": self.file,
-            "tracks": []
         }
+        if not minimal:
+            ret["tracks"] = list()
+        else:
+            return ret
         for track in self.get_tracks():
             ret["tracks"].append({
                     "artist_id": track.artist.id,
