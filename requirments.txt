@@ -1,0 +1,6 @@
+whoosh
+youtube_dl
+mutagen
+pydub
+pyaudio
+pyalsaaudio
