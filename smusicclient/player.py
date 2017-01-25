@@ -16,6 +16,11 @@ mixer = Mixer(cardindex=config.cardindex)
 lib = None
 
 
+def match_target_amplitude(sound, target_dBFS):
+    change_in_dBFS = target_dBFS - sound.dBFS
+    return sound.apply_gain(change_in_dBFS)
+
+
 class Stream(Thread):
     def __init__(self, f, on_terminated, is_cache=False):
         self.__is_cache = is_cache
@@ -53,7 +58,7 @@ class Stream(Thread):
         self.__active = False
 
     def __make_chunks(self):
-        self.__segment = AudioSegment.from_file(self.__path)
+        self.__segment = match_target_amplitude(AudioSegment.from_file(self.__path), -20)
         self.__chunks = make_chunks(self.__segment, 100)
 
     def __get_stream(self):
