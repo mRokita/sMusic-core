@@ -153,7 +153,7 @@ class ConnectionThread(Thread):
         except Exception as e:
             logs.print_debug("exception while closing connection in reconnecting: %s" % e)
         self.__is_connected = False
-        self.socket_overlay = SocketOverlay
+        self.socket_overlay = SocketOverlay()
         self.binder.set_connection(self.socket_overlay)
         try:
             self.socket_overlay.connect()
