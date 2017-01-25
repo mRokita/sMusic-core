@@ -20,16 +20,12 @@ class Binder:
     def __init__(self):
         self.binds = dict()
         self.gaps = None
-        self.conn = None
         self.lib = None
         self.player = None
         """:type : smusicclient.player.Player"""
 
     def set_gaps_controller(self, ctl):
         self.gaps = ctl
-
-    def set_connection(self, ctl):
-        self.conn = ctl
 
     def set_library(self, lib):
         self.lib = lib
@@ -110,7 +106,6 @@ class ConnectionThread(Thread):
         logs.print_info("Łączenie z serwerem...")
         self.binder = binder
         self.socket_overlay = SocketOverlay()
-        self.binder.set_connection(self.socket_overlay)
         self.socket_overlay.connect()
         logs.print_info("Połączono z serwerem!")
         self.__is_connected = True
@@ -154,7 +149,6 @@ class ConnectionThread(Thread):
             logs.print_debug("exception while closing connection in reconnecting: %s" % e)
         self.__is_connected = False
         self.socket_overlay = SocketOverlay()
-        self.binder.set_connection(self.socket_overlay)
         try:
             self.socket_overlay.connect()
             self.__is_connected = True
