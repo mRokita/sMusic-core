@@ -137,7 +137,7 @@ class ConnectionThread(Thread):
                 pass
             try:
                 msg = self.conn.read()
-            except socket.error as e:
+            except Exception as e:
                 logs.print_warning("socket.error while waiting for server request: %s" % e)
                 self.__is_connected = False
             if not msg:
