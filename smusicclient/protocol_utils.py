@@ -98,7 +98,7 @@ class SenderThread(Thread):
                 time.sleep(0.01)
         self.__conn.close()
 
-    def close():
+    def close(self):
         self.__was_stopped = True
 
 
@@ -152,6 +152,7 @@ class ConnectionThread(Thread):
         logs.print_info("Próba ponownego nawiązania połączenia")
         try:
             self.sender_thread.close()
+            self.stop()
         except Exception as e:
             logs.print_debug("exception while closing connection in reconnecting: %s" % e)
         self.conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
@@ -164,6 +165,7 @@ class ConnectionThread(Thread):
             self.sender_thread.start()
             self.__is_connected = True
             self.last_seen = datetime.datetime.now()
+            self.start()
             logs.print_info("Nawiązano połączenie ponownie")
         except socket.error as e:
             logs.print_warning("exception while trying to reconnect: %s " % e)
@@ -174,8 +176,10 @@ class ConnectionThread(Thread):
                 logs.print_debug("Serwer przekroczył czas oczekiwania na odpowiedz")
                 self.reconnect()
             # TODO dodać wysyłanie pingów
-            if not self.__is_connected:
+            while not self.__is_connected:
                 self.reconnect()
+                if self.__is_connected:
+                    return
             time.sleep(1)
 
 
