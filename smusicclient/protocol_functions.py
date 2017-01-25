@@ -201,7 +201,6 @@ def get_current_queue():
             "album_id": track.album.id,
             "album": track.album.name,
             "file": track.file,
-            "is_current": binder.player.get_queue_position() == i,
             "id": track.id,
             "length": track.length,
             "length_readable": "0".join(("%2.2s:%2.2s" % (int(track.length // 60), int(track.length % 60))).split(" "))

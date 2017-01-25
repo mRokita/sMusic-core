@@ -233,6 +233,7 @@ class Player:
         data = {"vol_left": vol[0],
                 "vol_right": vol[0] if len(vol) == 1 else vol[1],
                 "status": "playing" if self.is_playing() else "paused",
+                "queue_position": self.get_queue_position(),
                 "mode": self.mode,
                 "queue_md5": hashlib.md5(u", ".join([track.id + str(track.length) for track in self.__queue])).hexdigest()}
         if self.track:
