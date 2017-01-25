@@ -78,13 +78,15 @@ class Binder:
 
 class SocketOverlay:
     def __init__(self):
-        self.__conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
         self.__lock = threading.Lock()
+        self.__conn = None
 
     def connect(self):
-        self.__conn.settimeout(10)
+        logs.print_info("Łączenie z serwerem...")
+        self.__conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+        self.__conn.settimeout(timeout_time.seconds)
         self.__conn.connect((config.server_host, config.server_port))
-        self.__conn.settimeout(None)
+        logs.print_info("Połączono z serwerem!")
 
     def read(self):
         return self.__conn.read()
@@ -94,8 +96,12 @@ class SocketOverlay:
             self.__conn.send(data)
 
     def close(self):
-        with self.__lock:
-            self.__conn.close()
+        if self.__conn is not None:
+            with self.__lock:
+                self.__conn.close()
+            self.__conn = None
+        else:
+            logs.print_debug("Socket jest zamknięty.")
 
 
 class ConnectionThread(Thread):
@@ -103,69 +109,68 @@ class ConnectionThread(Thread):
         Thread.__init__(self)
         self.daemon = True
         self.__was_stopped = False
-        logs.print_info("Łączenie z serwerem...")
         self.binder = binder
         self.socket_overlay = SocketOverlay()
-        self.socket_overlay.connect()
-        logs.print_info("Połączono z serwerem!")
-        self.__is_connected = True
-        self.last_seen = datetime.datetime.now()
+        try:
+            self.socket_overlay.connect()
+        except Exception as e:
+            logs.print_debug("Exception while trying to connect: %s" % e)
+            self.__is_connected = False
+        else:
+            self.__is_connected = True
+            self.last_seen = datetime.datetime.now()
 
     def run(self):
         logs.print_info("Oczekiwanie na handshake...")
-        msg = self.socket_overlay.read()
-        Thread(target=self.__pinger).start()
         buff = ""
         while not self.__was_stopped:
-            buff += msg
-            self.last_seen = datetime.datetime.now()
-            if '\n' in msg:
-                esc_string = buff[:buff.index('\n')]
-                buff = buff[buff.index('\n') + 1:]
-                data = json.loads(un_escape(esc_string))
-                logs.print_debug("RECEIVED: %s" % data)
-                if "request" in data:
-                    Thread(target=partial(self.binder.handle_message, data, self.socket_overlay)).start()
-            while not self.__is_connected:
-                pass
-            try:
-                msg = self.socket_overlay.read()
-            except socket.error as e:
-                logs.print_warning("socket.error while waiting for server request: %s" % e)
-                self.__is_connected = False
-            if not msg:
-                logs.print_warning("Serwer zamknął połączenie")
-                self.__is_connected = False
+            if self.__is_connected:
+                msg = ""
+                try:
+                    msg = self.socket_overlay.read()
+                except socket.timeout:
+                    logs.print_warning("Timeout serwera")
+                    self.__is_connected = False
+                except socket.error as e:
+                    logs.print_warning("socket.error while waiting for server request: %s" % e)
+                    self.__is_connected = False
+                if not msg:
+                    logs.print_warning("Serwer zamknął połączenie")
+                    self.__is_connected = False
+                if not self.__is_connected:
+                    continue
+                buff += msg
+                self.last_seen = datetime.datetime.now()
+                if '\n' in msg:
+                    esc_string = buff[:buff.index('\n')]
+                    buff = buff[buff.index('\n') + 1:]
+                    data = json.loads(un_escape(esc_string))
+                    logs.print_debug("RECEIVED: %s" % data)
+                    if "request" in data:
+                        Thread(target=partial(self.binder.handle_message, data, self.socket_overlay)).start()
+            else:
+                while not self.__is_connected:
+                    time.sleep(1)
+                    self.reconnect()
 
     def stop(self):
         self.__was_stopped = True
         self.socket_overlay.close()
 
     def reconnect(self):
-        logs.print_info("Próba ponownego nawiązania połączenia")
         try:
             self.socket_overlay.close()
         except Exception as e:
             logs.print_debug("exception while closing connection in reconnecting: %s" % e)
         self.__is_connected = False
+        del self.socket_overlay
         self.socket_overlay = SocketOverlay()
         try:
             self.socket_overlay.connect()
             self.__is_connected = True
             self.last_seen = datetime.datetime.now()
-            logs.print_info("Nawiązano połączenie ponownie")
         except socket.error as e:
             logs.print_warning("exception while trying to reconnect: %s " % e)
-
-    def __pinger(self):
-        while not self.__was_stopped:
-            if datetime.datetime.now() - self.last_seen > timeout_time:
-                logs.print_debug("Serwer przekroczył czas oczekiwania na odpowiedz")
-                self.reconnect()
-            # TODO dodać wysyłanie pingów
-            if not self.__is_connected:
-                self.reconnect()
-            time.sleep(1)
 
 
 def escape(msg):
