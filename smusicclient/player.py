@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logs
+import hashlib
 from alsaaudio import Mixer
 from threading import Thread
 from time import sleep
@@ -227,7 +228,8 @@ class Player:
         data = {"vol_left": vol[0],
                 "vol_right": vol[0] if len(vol) == 1 else vol[1],
                 "status": "playing" if self.is_playing() else "paused",
-                "mode": self.mode}
+                "mode": self.mode,
+                "queue_md5": hashlib.md5(u", ".join([track.file for track in self.__queue])).hexdigest()}
         if self.track:
             data["file"] = self.track.file
             data["position"] = self.get_position()

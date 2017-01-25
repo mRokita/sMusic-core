@@ -11,7 +11,6 @@ from threading import Thread
 
 import config
 import logs
-import threading
 
 timeout_time = datetime.timedelta(seconds=30)
 
@@ -80,26 +79,27 @@ class Binder:
         conn.send(escape(json.dumps(ret)))
 
 
-class SocketOverlay:
-    def __init__(self):
-        self.__conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
-        self.__lock = threading.Lock()
-
-    def connect(self):
-        self.__conn.settimeout(10)
-        self.__conn.connect((config.server_host, config.server_port))
-        self.__conn.settimeout(None)
-
-    def read(self):
-        return self.__conn.read()
+class SenderThread(Thread):
+    def __init__(self, conn):
+        Thread.__init__(self)
+        self.daemon = True
+        self.__was_stopped = False
+        self.__queue = []
+        self.__conn = conn
 
     def send(self, data):
-        with self.__lock:
-            self.__conn.send(data)
+        self.__queue.append(data)
 
-    def close(self):
-        with self.__lock:
-            self.__conn.close()
+    def run(self):
+        while not self.__was_stopped:
+            if self.__queue:
+                self.__conn.send(self.__queue.pop())
+            else:
+                time.sleep(0.01)
+        self.__conn.close()
+
+    def close():
+        self.__was_stopped = True
 
 
 class ConnectionThread(Thread):
@@ -109,16 +109,18 @@ class ConnectionThread(Thread):
         self.__was_stopped = False
         logs.print_info("Łączenie z serwerem...")
         self.binder = binder
-        self.socket_overlay = SocketOverlay()
-        self.binder.set_connection(self.socket_overlay)
-        self.socket_overlay.connect()
+        self.conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+        self.binder.set_connection(self.conn)
+        self.conn.connect((config.server_host, config.server_port))
         logs.print_info("Połączono z serwerem!")
         self.__is_connected = True
         self.last_seen = datetime.datetime.now()
+        self.sender_thread = SenderThread(self.conn)
+        self.sender_thread.start()
 
     def run(self):
         logs.print_info("Oczekiwanie na handshake...")
-        msg = self.socket_overlay.read()
+        msg = self.conn.read()
         Thread(target=self.__pinger).start()
         buff = ""
         while not self.__was_stopped:
@@ -130,11 +132,11 @@ class ConnectionThread(Thread):
                 data = json.loads(un_escape(esc_string))
                 logs.print_debug("RECEIVED: %s" % data)
                 if "request" in data:
-                    Thread(target=partial(self.binder.handle_message, data, self.socket_overlay)).start()
+                    Thread(target=partial(self.binder.handle_message, data, self.sender_thread)).start()
             while not self.__is_connected:
                 pass
             try:
-                msg = self.socket_overlay.read()
+                msg = self.conn.read()
             except socket.error as e:
                 logs.print_warning("socket.error while waiting for server request: %s" % e)
                 self.__is_connected = False
@@ -144,19 +146,22 @@ class ConnectionThread(Thread):
 
     def stop(self):
         self.__was_stopped = True
-        self.socket_overlay.close()
+        self.conn.close()
 
     def reconnect(self):
         logs.print_info("Próba ponownego nawiązania połączenia")
         try:
-            self.socket_overlay.close()
+            self.sender_thread.close()
         except Exception as e:
             logs.print_debug("exception while closing connection in reconnecting: %s" % e)
-        self.__is_connected = False
-        self.socket_overlay = SocketOverlay
-        self.binder.set_connection(self.socket_overlay)
+        self.conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+        self.binder.set_connection(self.conn)
         try:
-            self.socket_overlay.connect()
+            self.conn.settimeout(10)
+            self.conn.connect((config.server_host, config.server_port))
+            self.conn.settimeout(None)
+            self.sender_thread = SenderThread(self.conn)
+            self.sender_thread.start()
             self.__is_connected = True
             self.last_seen = datetime.datetime.now()
             logs.print_info("Nawiązano połączenie ponownie")
