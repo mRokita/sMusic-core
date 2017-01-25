@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logs
+import hashlib
 from alsaaudio import Mixer
 from threading import Thread
 from time import sleep
@@ -13,6 +14,11 @@ import music_library
 
 mixer = Mixer(cardindex=config.cardindex)
 lib = None
+
+
+def match_target_amplitude(sound, target_dBFS):
+    change_in_dBFS = target_dBFS - sound.dBFS
+    return sound.apply_gain(change_in_dBFS)
 
 
 class Stream(Thread):
@@ -52,7 +58,7 @@ class Stream(Thread):
         self.__active = False
 
     def __make_chunks(self):
-        self.__segment = AudioSegment.from_file(self.__path)
+        self.__segment = match_target_amplitude(AudioSegment.from_file(self.__path), -20)
         self.__chunks = make_chunks(self.__segment, 100)
 
     def __get_stream(self):
@@ -227,7 +233,9 @@ class Player:
         data = {"vol_left": vol[0],
                 "vol_right": vol[0] if len(vol) == 1 else vol[1],
                 "status": "playing" if self.is_playing() else "paused",
-                "mode": self.mode}
+                "queue_position": self.get_queue_position(),
+                "mode": self.mode,
+                "queue_md5": hashlib.md5(u", ".join([track.id + str(track.length) for track in self.__queue])).hexdigest()}
         if self.track:
             data["file"] = self.track.file
             data["position"] = self.get_position()
