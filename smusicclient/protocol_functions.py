@@ -171,7 +171,7 @@ def del_track_from_playlist(playlist_id, track_num):
 
 @binder.bind()
 def get_playlists():
-    return {"request": "ok", "playlists": [p.to_www() for p in binder.lib.get_playlists()]}
+    return {"request": "ok", "playlists": [p.to_www(minimal=True) for p in binder.lib.get_playlists()]}
 
 
 @binder.bind()
