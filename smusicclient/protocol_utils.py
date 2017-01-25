@@ -119,30 +119,39 @@ class ConnectionThread(Thread):
         self.sender_thread.start()
 
     def run(self):
+        was_connected = True
         logs.print_info("Oczekiwanie na handshake...")
         msg = self.conn.read()
         Thread(target=self.__pinger).start()
         buff = ""
         while not self.__was_stopped:
-            buff += msg
-            self.last_seen = datetime.datetime.now()
-            if '\n' in msg:
-                esc_string = buff[:buff.index('\n')]
-                buff = buff[buff.index('\n') + 1:]
-                data = json.loads(un_escape(esc_string))
-                logs.print_debug("RECEIVED: %s" % data)
-                if "request" in data:
-                    Thread(target=partial(self.binder.handle_message, data, self.sender_thread)).start()
-            while not self.__is_connected:
-                pass
-            try:
-                msg = self.conn.read()
-            except socket.error as e:
-                logs.print_warning("socket.error while waiting for server request: %s" % e)
-                self.__is_connected = False
-            if not msg:
-                logs.print_warning("Serwer zamknął połączenie")
-                self.__is_connected = False
+            if self.__is_connected:
+                if not was_connected:
+                    was_connected = True
+                    buff = ""
+                    msg = self.conn.read()
+                buff += msg
+                self.last_seen = datetime.datetime.now()
+                if '\n' in msg:
+                    esc_string = buff[:buff.index('\n')]
+                    buff = buff[buff.index('\n') + 1:]
+                    data = json.loads(un_escape(esc_string))
+                    logs.print_debug("RECEIVED: %s" % data)
+                    if "request" in data:
+                        Thread(target=partial(self.binder.handle_message, data, self.sender_thread)).start()
+                while not self.__is_connected:
+                    pass
+                try:
+                    msg = self.conn.read()
+                except socket.error as e:
+                    logs.print_warning("socket.error while waiting for server request: %s" % e)
+                    self.__is_connected = False
+                if not msg:
+                    logs.print_warning("Serwer zamknął połączenie")
+                    self.__is_connected = False
+            else:
+                was_connected = False
+                time.sleep(0.5)
 
     def stop(self):
         self.__was_stopped = True
@@ -152,7 +161,7 @@ class ConnectionThread(Thread):
         logs.print_info("Próba ponownego nawiązania połączenia")
         try:
             self.sender_thread.close()
-            self.stop()
+            self.conn.close()
         except Exception as e:
             logs.print_debug("exception while closing connection in reconnecting: %s" % e)
         self.conn = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
@@ -165,7 +174,6 @@ class ConnectionThread(Thread):
             self.sender_thread.start()
             self.__is_connected = True
             self.last_seen = datetime.datetime.now()
-            self.start()
             logs.print_info("Nawiązano połączenie ponownie")
         except socket.error as e:
             logs.print_warning("exception while trying to reconnect: %s " % e)
