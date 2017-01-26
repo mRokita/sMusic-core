@@ -97,8 +97,8 @@ class SocketOverlay:
 
     def close(self):
         if self.__conn is not None:
-            self.__conn.close()
             self.__conn.shutdown(socket.SHUT_RDWR)
+            self.__conn.close()
             self.__conn = None
         else:
             logs.print_debug("Socket jest zamknięty.")
