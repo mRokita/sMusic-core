@@ -30,6 +30,9 @@ class Stream(Thread):
         Thread.__init__(self)
         self.start()
 
+    def get_queue_hash(self):
+        return hash(tuple(self.__queue))
+
     def play(self):
         self.__paused = False
 
@@ -230,7 +233,8 @@ class Player:
                 "status": "playing" if self.is_playing() else "paused",
                 "queue_position": self.get_queue_position(),
                 "mode": self.mode,
-                "queue_md5": hashlib.md5(u", ".join([track.id + str(track.length) for track in self.__queue])).hexdigest()}
+                "queue_md5": self.get_queue_hash()}
+
         if self.track:
             data["file"] = self.track.file
             data["position"] = self.get_position()
