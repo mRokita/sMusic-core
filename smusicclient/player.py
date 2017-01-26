@@ -30,9 +30,6 @@ class Stream(Thread):
         Thread.__init__(self)
         self.start()
 
-    def get_queue_hash(self):
-        return hash(tuple(self.__queue))
-
     def play(self):
         self.__paused = False
 
@@ -118,7 +115,10 @@ class Player:
         """:type : musiclibrary.Track"""
         self.__queue = []
         self.__stream = None
-
+    
+    def get_queue_hash(self):
+    	return hash(frozenset(self.__queue))
+   
     def load(self, track):
         self.clear_queue()
         if self.__stream:
